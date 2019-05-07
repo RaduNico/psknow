@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {font-family: Arial, Helvetica, sans-serif;}
+    form {border: 3px solid #f1f1f1;}
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="/css/log_reg.css">
+  <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+</head>
+<body>
+
+<ul class=navbar>
+  <li><a href='/'>Home</a></li>
+  <li><a href='/upload/'>Upload</a></li>
+  {% if logged_in %}
+  <li style="float:right"><a href='/logout/'>Logout</a></li>
+  {% else %}
+  <li style="float:right"><a href='/register/'>Register</a></li>
+  <li style="float:right"><a class="active" href='/login/'>Login</a></li>
+  {% endif %}
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+<h2>Login Form</h2>
+
+<form action="/login/" method="POST">
+  <div class="container">
+
+    <label for="username"><b>Username</b></label>
+    <input type="text" placeholder="Enter Username" name="username" req>
+
+    <label for="password"><b>Password</b></label>
+    <input type="password" name="password" placeholder="Enter Password" required="">
+
+    <button type="submit">Login</button>
+  </div>
+</form>
+
+</body>
+</html>

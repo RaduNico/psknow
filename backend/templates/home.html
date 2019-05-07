@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    td:last-child, th:last-child {
+     text-align: right;
+    }
+
+    tr:nth-child(even){background-color: #6ec071}
+    tr:nth-child(odd){background-color: #93cf95}
+
+    th {
+      background-color: #357a38;
+      color: white;
+    }
+
+    tr:hover td {
+      background-color: #459c48;
+    }
+
+    </style>
+    <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+</head>
+<body>
+<ul class=navbar>
+  <li><a class="active" href='/'>Home</a></li>
+  <li><a href='/upload/'>Upload</a></li>
+  {% if logged_in %}
+  <li style="float:right"><a href='/logout/'>Logout</a></li>
+  {% else %}
+  <li style="float:right"><a href='/register/'>Register</a></li>
+  <li style="float:right"><a href='/login/'>Login</a></li>
+  {% endif %}
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+{% if logged_in %}
+    <h2>Your captures:</h2>
+    {% if handshakes|length > 0 %}
+        <table>
+            <tr>
+                <th>Wifi Name</th>
+                <th>Wifi MAC</th>
+                <th>HS Type</th>
+                <th>Date Added</th>
+                <th>Status</th>
+                <th>Estimated time</th>
+                <th>Password</th>
+                <th>Date Cracked</th>
+            </tr>
+            {% for handshake in handshakes %}
+            <tr>
+                <td>{{ handshake[0] }}</td>
+                <td>{{ handshake[1] }}</td>
+                <td>{{ handshake[2] }}</td>
+                <td>{{ handshake[3] }}</td>
+                <td>{{ handshake[4] }}</td>
+                <td>{{ handshake[5] }}</td>
+                <td>{{ handshake[6] }}</td>
+                <td>{{ handshake[7] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <h2>Send handshake to start cracking!</h2>
+    {% endif %}
+{% else %}
+    <h2>Please login first!</h2>
+{% endif %}
+
+</body>
+</html>

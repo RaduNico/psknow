@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn application running the Psknow backend
+After=network.target
+
+[Service]
+User=pandora
+Group=www-data
+WorkingDirectory=/home/pandora/PycharmProjects/backend
+Environment="ATH=/home/pandora/PycharmProjects/backend/combineenv/bin"
+ExecStart=/home/pandora/PycharmProjects/backend/backendenv/bin/gunicorn -t 900 --workers 2 --bind 127.0.0.1:9645 wsgi --access-logfile /home/pandora/PycharmProjects/backend/logs/access.log --error-logfile /home/pandora/PycharmProjects/backend/logs/errors.log
+
+[Install]
+WantedBy=multi-user.target

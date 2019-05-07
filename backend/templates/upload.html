@@ -1,0 +1,42 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="/css/navbar.css">
+	</head>
+	<body>
+		<ul class=navbar>
+			<li><a href='/'>Home</a></li>
+			<li><a class="active" href='/upload/'>Upload</a></li>
+			{% if logged_in %}
+			<li style="float:right"><a href='/logout/'>Logout</a></li>
+			{% else %}
+			<li style="float:right"><a href='/register/'>Register</a></li>
+			<li style="float:right"><a href='/login/'>Login</a></li>
+			{% endif %}
+		</ul>
+
+		<br>
+		<br>
+
+		<h2>Upload capture file(s)</h2>
+		<form action = "/upload/" method = "POST" enctype = "multipart/form-data">
+			<input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng" multiple>
+			<input type = "submit">
+			<br>
+			{% with messages = get_flashed_messages(with_categories=true) %}
+				{% if messages %}
+					{% for type,message in messages %}
+						{% if type == 'success' %}
+						<div style='color:green'>
+						{{ message }}
+						</div>
+						{% else%}
+						<div style='color:red'>
+						{{ message }}
+						</div>
+						{% endif %}
+					{% endfor %}
+				{% endif %}
+			{% endwith %}
+		</form>
+	</body>
+</html>

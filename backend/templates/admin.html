@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+
+    div.userbox {
+        border: 2px solid green;
+        margin: 5px;
+        padding: 5px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    td:last-child, th:last-child {
+     text-align: right;
+    }
+
+    tr:nth-child(even){background-color: #6ec071}
+    tr:nth-child(odd){background-color: #93cf95}
+
+    th {
+      background-color: #357a38;
+      color: white;
+    }
+
+    tr:hover td {
+      background-color: #459c48;
+    }
+
+    </style>
+    <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+    <script language="javascript">
+        window.onload = init;
+
+        function init() {
+            document.getElementById('option_{{workload}}').selected="selected";
+        }
+    </script>
+</head>
+<body>
+<ul class=navbar>
+  <li><a href='/'>Home</a></li>
+  <li><a class="active" href='/admin/'>Admin</a></li>
+  <li style="float:right"><a href='/logout/'>Logout</a></li>
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+<form action="/admin/" method="post">
+<select name="workload" id="select_workload">
+  <option id="option_1" value="1">1) Low Performance, Minimal Impact</option>
+  <option id="option_2" value="2">2) Default Performance, Noticeable Impact</option>
+  <option id="option_3" value="3">3) High Performance, Unresponsive Impact</option>
+  <option id="option_4" value="4">4) V. High Performance, Headless Impact</option>
+</select>
+<input type="checkbox" name="force_checkbox" value="force">Force restart?<br>
+<input type="submit"/> </form>
+
+</body>
+</html>

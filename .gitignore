@@ -1,0 +1,17 @@
+cracker/dict/1509_have-i-been-pwned-v4_found.txt
+cracker/dict/515_have-i-been-pwned-v2_found.txt
+cracker/dict/899_have-i-been-pwned-v3_found.txt
+cracker/crack/hashcat.pot
+cracker/__pycache__
+cracker/handshakes/*
+cracker/logs/*
+cracker/.idea
+
+backend/secret_key
+backend/backendvenv
+backend/__pycache__
+backend/logs/*
+backend/handshakes/*
+backend/.idea
+
+helpers/sources/*

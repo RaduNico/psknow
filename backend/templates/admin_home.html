@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+
+    div.userbox {
+        border: 2px solid green;
+        margin: 5px;
+        padding: 5px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    td:last-child, th:last-child {
+     text-align: right;
+    }
+
+    tr:nth-child(even){background-color: #6ec071}
+    tr:nth-child(odd){background-color: #93cf95}
+
+    th {
+      background-color: #357a38;
+      color: white;
+    }
+
+    tr:hover td {
+      background-color: #459c48;
+    }
+
+    </style>
+    <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+</head>
+<body>
+<ul class=navbar>
+  <li><a class="active" href='/'>Home</a></li>
+  <li><a href='/admin/'>Admin</a></li>
+  <li style="float:right"><a href='/logout/'>Logout</a></li>
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+{% if user_handshakes|length > 0 %}
+    {% for user_hs_pair in user_handshakes %}
+        <div class="userbox">
+        <h2>{{ user_hs_pair[0] }}</h2>
+        {% if user_hs_pair[1]|length > 0 %}
+            <table>
+                <tr>
+                    <th>Wifi Name</th>
+                    <th>Wifi MAC</th>
+                    <th>HS Type</th>
+                    <th>Date Added</th>
+                    <th>Status</th>
+                    <th>Estimated time</th>
+                    <th>Password</th>
+                    <th>Date Cracked</th>
+                </tr>
+                {% for handshake in user_hs_pair[1] %}
+                <tr>
+                    <td>{{ handshake[0] }}</td>
+                    <td>{{ handshake[1] }}</td>
+                    <td>{{ handshake[2] }}</td>
+                    <td>{{ handshake[3] }}</td>
+                    <td>{{ handshake[4] }}</td>
+                    <td>{{ handshake[5] }}</td>
+                    <td>{{ handshake[6] }}</td>
+                    <td>{{ handshake[7] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <h2 style="color:red">Error! No handshakes!</h2>
+        {% endif %}
+        </div>
+    <br>
+    {% endfor %}
+{% else %}
+    <h2>Get some users</h2>
+{% endif %}
+
+</body>
+</html>
