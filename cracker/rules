@@ -314,7 +314,7 @@
         "wordsize": 49391200
     },
     {
-        "name": "SimpleSymbolNum_bac",cd d
+        "name": "SimpleSymbolNum_bac",
         "type" : "john",
         "priority": 153,
         "baselist": "/home/pandora/PycharmProjects/psknow/cracker/dict/nume_bac2018.txt",

@@ -25,7 +25,7 @@ class Configuration(object):
     handshake_path = 'handshakes'
 
     # Cracking paths
-    john_path = "/home/pandora/sec/placeholder/sources/john/run/john"
+    john_path = "/home/pandora/PycharmProjects/psknow/helpers/sources/john/run/john"
     attack_path = 'crack'
     hashcat_potfile_path = os.path.join(attack_path, 'hashcat.pot')  # TODO create file if it does not exist!
     escapes_path = 'escapes'
