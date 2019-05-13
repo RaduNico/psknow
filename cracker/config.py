@@ -70,18 +70,35 @@ class Configuration(object):
         Configuration.myLogger.info("Logging activated!")
 
     @staticmethod
-    def initialize():
-        Configuration.setup_logging()
-        Configuration.database_conection()
+    def read_rules():
         try:
             with open('rules') as json_data:
                 Configuration.rules = json.load(json_data)
         except Exception as e:
             Configuration.log_fatal("Error trying to load rules data: %s" % e)
 
+        rule_names = set()
+
         for rule in Configuration.rules:
+            # Check for duplicate rules
+            if rule["name"] in rule_names:
+                Configuration.log_fatal("Duplicate rule %s" % rule["name"])
+            rule_names.add(rule["name"])
+
             if rule["priority"] > Configuration.max_rules:
                 Configuration.max_rules = rule["priority"]
+
+        if "rules" in Configuration.db.list_collection_names():
+            Configuration.db["rules"].drop()
+
+        rules_db = Configuration.db["rules"]
+        rules_db.insert_many(Configuration.rules)
+
+    @staticmethod
+    def initialize():
+        Configuration.setup_logging()
+        Configuration.database_conection()
+        Configuration.read_rules()
 
     @staticmethod
     def get_admin_table():

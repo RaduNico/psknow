@@ -69,7 +69,7 @@
     {% for user_hs_pair in user_handshakes %}
         <div class="userbox">
         <h2>{{ user_hs_pair[0] }}</h2>
-        {% if user_hs_pair[1]|length > 0 %}
+        {% if user_hs_pair[1][0]|length > 0 %}
             <table>
                 <tr>
                     <th>Wifi Name</th>
@@ -78,10 +78,34 @@
                     <th>Date Added</th>
                     <th>Status</th>
                     <th>Estimated time</th>
+                </tr>
+                {% for handshake in user_hs_pair[1][0] %}
+                <tr>
+                    <td>{{ handshake[0] }}</td>
+                    <td>{{ handshake[1] }}</td>
+                    <td>{{ handshake[2] }}</td>
+                    <td>{{ handshake[3] }}</td>
+                    <td>{{ handshake[4] }}</td>
+                    <td>{{ handshake[5] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <h2>No uncracked handshakes</h2>
+        {% endif %}
+        {% if user_hs_pair[1][1]|length > 0 %}
+            <br>
+            <table>
+                <tr>
+                    <th>Wifi Name</th>
+                    <th>Wifi MAC</th>
+                    <th>HS Type</th>
+                    <th>Date Added</th>
+                    <th>Status</th>
                     <th>Password</th>
                     <th>Date Cracked</th>
                 </tr>
-                {% for handshake in user_hs_pair[1] %}
+                {% for handshake in user_hs_pair[1][1] %}
                 <tr>
                     <td>{{ handshake[0] }}</td>
                     <td>{{ handshake[1] }}</td>
@@ -90,12 +114,9 @@
                     <td>{{ handshake[4] }}</td>
                     <td>{{ handshake[5] }}</td>
                     <td>{{ handshake[6] }}</td>
-                    <td>{{ handshake[7] }}</td>
                 </tr>
                 {% endfor %}
             </table>
-        {% else %}
-            <h2 style="color:red">Error! No handshakes!</h2>
         {% endif %}
         </div>
     <br>

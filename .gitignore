@@ -1,11 +1,19 @@
-cracker/dict/1509_have-i-been-pwned-v4_found.txt
-cracker/dict/515_have-i-been-pwned-v2_found.txt
-cracker/dict/899_have-i-been-pwned-v3_found.txt
+cracker/dict/rest_hibp.txt
+cracker/dict/top_10-100mil_hibp.txt
+cracker/dict/top_10mil_hibp.txt
+
 cracker/crack/hashcat.pot
 cracker/__pycache__
 cracker/handshakes/*
 cracker/logs/*
 cracker/.idea
+
+backend/static/dic_lc_eng.txt
+backend/static/dic_lc_rom.txt
+backend/static/nume_bac2018.txt
+backend/static/nume_comune_bac2018.txt
+backend/static/top_2500_engl.txt
+backend/static/wordlist-top4800-probable.txt
 
 backend/secret_key
 backend/backendvenv

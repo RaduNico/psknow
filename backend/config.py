@@ -5,6 +5,7 @@ from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 
+
 class Configuration(object):
     # Database Variables
     database_location = 'mongodb://127.0.0.1:27017/'
@@ -16,6 +17,7 @@ class Configuration(object):
     wifis = None
     users = None
     admin = None
+    rules = None
 
     admin_table_name = "MainControlTable"
     default_admin_table = {"id": "MainControlTable", "workload": 2, "force": False}
@@ -69,6 +71,10 @@ class Configuration(object):
 
     # Accepted uplaod extensions
     accepted_extensions = {"cap", "pcap", "16800", "pcapng"}
+
+    # Dictionaries allowed for download
+    dictionary_names = ["wordlist-top4800-probable.txt", "dic_lc_rom.txt", "dic_lc_eng.txt", "nume_bac2018.txt",
+                        "top_2500_engl.txt", "nume_comune_bac2018.txt"]
 
     # Logging variables
     logger = None
@@ -145,6 +151,14 @@ class Configuration(object):
         return True
 
     @staticmethod
+    def get_active_rules():
+        return Configuration.rules.find({}).sort([("priority", 1)])
+
+    @staticmethod
+    def get_next_rule(crt_rule):
+        return next(Configuration.rules.find({"priority": {"$gt": crt_rule}}).sort([("priority", 1)]))
+
+    @staticmethod
     def database_conection():
         try:
             Configuration.conn = MongoClient(Configuration.database_location,
@@ -154,6 +168,7 @@ class Configuration(object):
             Configuration.wifis = Configuration.db["wifis"]
             Configuration.users = Configuration.db["users"]
             Configuration.admin = Configuration.db["admin"]
+            Configuration.rules = Configuration.db["rules"]
             Configuration.check_db_conn()
         except Exception as e:
             Configuration.logger.critical("Could not establish initial connection with error %s" % e)

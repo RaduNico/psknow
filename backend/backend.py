@@ -32,7 +32,7 @@ login_manager.login_view = 'login'
 def die(condition, message):
     if condition:
         Configuration.logger.critical("line %s in function %s, error %s" %
-                                    (inspect.currentframe().f_back.f_lineno, inspect.stack()[1][3], message))
+                                      (inspect.currentframe().f_back.f_lineno, inspect.stack()[1][3], message))
         sys.exit(-1)
 
 
@@ -67,26 +67,35 @@ def not_admin(f):
     return decorated_function
 
 
-def get_display_tuple(handshake, document):
+def get_cracked_tuple(handshake, document):
     ssid = handshake["SSID"]
     mac = handshake["MAC"]
     hs_type = handshake["handshake_type"]
+    date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
+    crack_level = handshake["crack_level"]
+
+    password = handshake["password"]
+    date = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
+    raw_date = handshake["date_cracked"]
+
+    return ssid, mac, hs_type, date_added, crack_level, password, date, raw_date
+
+
+def get_uncracked_tuple(handshake, document):
+    ssid = handshake["SSID"]
+    mac = handshake["MAC"]
+    hs_type = handshake["handshake_type"]
+    date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
     if handshake["active"]:
-        # TODO instead of active use 'Trying <next_rule>...'
-        crack_level = "Active: %d" % handshake["crack_level"]
+        next_rule = Configuration.get_next_rule(handshake["crack_level"])
+        crack_level = "%d -> %d" % \
+                      (handshake["crack_level"], next_rule["priority"])
         eta = handshake["eta"]
     else:
         crack_level = handshake["crack_level"]
         eta = ""
-    password = "Open Network" if handshake["open"] else handshake["password"]
-    date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
 
-    if handshake["date_cracked"] is not None:
-        date = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
-    else:
-        date = None
-
-    return ssid, mac, hs_type, date_added, crack_level, eta, password, date
+    return ssid, mac, hs_type, date_added, crack_level, eta
 
 
 @application.route('/admin/', methods=['GET', 'POST'])
@@ -148,10 +157,17 @@ def home():
         for file_structure in all_files:
             crt_user = file_structure["user"]
             if crt_user not in user_handshakes:
-                user_handshakes[crt_user] = []
+                user_handshakes[crt_user] = [[], []]
 
             for handshake in sorted(file_structure["handshakes"], key=lambda k: k['SSID']):
-                user_handshakes[crt_user].append(get_display_tuple(handshake, file_structure))
+                if handshake["password"] == "":
+                    user_handshakes[crt_user][0].append(get_uncracked_tuple(handshake, file_structure))
+                else:
+                    user_handshakes[crt_user][1].append(get_cracked_tuple(handshake, file_structure))
+
+        # Sort based on crack date and remove trailing raw date
+        for entry in user_handshakes.values():
+            entry[1] = sorted(entry[1], key=lambda k: k[7])
 
         # Transform dict to list and sort by username
         user_handshakes = sorted(user_handshakes.items(), key=lambda k: k[0])
@@ -163,16 +179,58 @@ def home():
         flash("Database error!")
         return render_template('home.html', logged_in=True)
 
-    handshakes = []
+    uncracked = []
+    cracked = []
     if logged_in:
-        handshakes = []
         # Sort in mongo by the time the handshake was added
         for file_structure in Configuration.wifis.find({"user": current_user.get_id()}).sort([("date_added", 1)]):
             # Sort in python by the SSID
             for handshake in sorted(file_structure["handshakes"], key=lambda k: k['SSID']):
-                handshakes.append(get_display_tuple(handshake, file_structure))
+                if handshake["password"] == "":
+                    uncracked.append(get_uncracked_tuple(handshake, file_structure))
+                else:
+                    cracked.append(get_cracked_tuple(handshake, file_structure))
 
-    return render_template('home.html', handshakes=handshakes, logged_in=logged_in)
+    # Sort based on crack date and remove trailing raw date
+    cracked = sorted(cracked, key=lambda k: k[7])
+
+    return render_template('home.html', uncracked=uncracked, cracked=cracked, logged_in=logged_in)
+
+
+def get_rule_tuple(rule):
+    try:
+        priority = rule["priority"]
+        name = rule["name"]
+    except KeyError:
+        Configuration.logger.error("Error! Malformed rule %s" % rule)
+        return None
+
+    examples = ""
+    desc = ""
+    link = ""
+    try:
+        desc = rule["desc"]
+        link = rule["link"]
+        for example in rule["examples"]:
+            examples += example + " "
+
+        if len(examples) > 0:
+            examples = examples[:-1]
+    except KeyError:
+        pass
+
+    return priority, name, desc, examples, link
+
+
+@application.route('/statuses/', methods=['GET'])
+@login_required
+def statuses():
+    status_list = []
+
+    for rule in Configuration.get_active_rules():
+        status_list.append(get_rule_tuple(rule))
+
+    return render_template('statuses.html', statuses=status_list)
 
 
 @application.route('/login/', methods=['GET', 'POST'])
@@ -263,6 +321,17 @@ def send_navbar():
 @application.route('/css/log_reg.css', methods=["GET"])
 def send_logreg():
     return application.send_static_file("log_reg.css")
+
+
+@application.route('/dict', methods=["GET"])
+def send_dict():
+    dict_name = request.args.get("dict")
+    if dict_name is None or dict_name == "" or dict_name not in Configuration.dictionary_names:
+        flash("Bad dictionary request!")
+        Configuration.logger.warning("Bad dictionary request at link %s" % request.args.get("dict"))
+        return redirect(url_for("statuses"))
+
+    return application.send_static_file(dict_name)
 
 
 def check_db_conn():
@@ -434,14 +503,13 @@ def check_handshake(file_path, filename):
 @not_admin
 def upload_file():
     if request.method == 'GET':
-        # TODO is logged_in variable necessary?
-        return render_template('upload.html', logged_in=True)
+        return render_template('upload.html')
 
     if request.method == 'POST':
         # Check if database is not down
         if check_db_conn() is None:
             flash("Error 500. Service unavailable!")
-            return render_template('upload.html', logged_in=True)
+            return render_template('upload.html')
 
         # Check existence of file field
         if 'file' not in request.files:
@@ -494,7 +562,7 @@ def upload_file():
             new_entry["handshakes"] = extra_info["handshakes"]
             new_entry["file_type"] = extra_info["file_type"]
             new_entry["user"] = current_user.get_id()
-            new_entry["priority"] = 20
+            new_entry["priority"] = -5
 
             # Save received file
             try:

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <style>
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    td:last-child, th:last-child {
+     text-align: right;
+    }
+
+    tr:nth-child(even){background-color: #6ec071}
+    tr:nth-child(odd){background-color: #93cf95}
+
+    th {
+      background-color: #357a38;
+      color: white;
+    }
+
+    tr:hover td {
+      background-color: #459c48;
+    }
+
+    </style>
+  <style>
+    body {font-family: Arial, Helvetica, sans-serif;}
+    form {border: 3px solid #f1f1f1;}
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="/css/log_reg.css">
+  <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+</head>
+<body>
+
+<ul class=navbar>
+  <li><a href='/'>Home</a></li>
+  <li><a href='/upload/'>Upload</a></li>
+  <li><a class="active" href='/statuses/'>Statuses</a></li>
+  <li style="float:right"><a href='/logout/'>Logout</a></li>
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+<h2>Rules meaning:</h2>
+{% if statuses|length > 0 %}
+    <table>
+        <tr>
+            <th>Number</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Examples</th>
+            <th>Link</th>
+        </tr>
+        {% for status in statuses %}
+        <tr>
+            <td>{{ status[0] }}</td>
+            <td>{{ status[1] }}</td>
+            <td>{{ status[2] }}</td>
+            <td>{{ status[3] }}</td>
+            {% if status[4]|length > 0 %}
+            <td><a href="{{ status[4] }}">View</a></td>
+            {% else %}
+            <td></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <h2>No rules loaded at the moment</h2>
+{% endif %}
+
+
+</body>
+</html>

@@ -389,6 +389,9 @@ class Cracker:
 
         # Nothing is running now....let's fix that!
         # TODO make a Scheduler class and move this code in a schedule function
+        # TODO There is a bug that only happens when multiple handshakes are present in a file:
+        # TODO The first element returned by the capture cursor will be the one with the lowest crack_level
+        # TODO but it can be one with an already cracked password
         capture_cursor = Configuration.wifis.find(
             {"handshakes": {"$elemMatch": {"$and": [{"crack_level": {"$lt": Configuration.max_rules, "$gt": -1}},
                                                     {"open": False}, {"password": ""}]}}}).\

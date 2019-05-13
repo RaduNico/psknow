@@ -14,12 +14,8 @@
 <ul class=navbar>
   <li><a href='/'>Home</a></li>
   <li><a href='/upload/'>Upload</a></li>
-  {% if logged_in %}
-  <li style="float:right"><a href='/logout/'>Logout</a></li>
-  {% else %}
   <li style="float:right"><a href='/register/'>Register</a></li>
   <li style="float:right"><a class="active" href='/login/'>Login</a></li>
-  {% endif %}
 </ul>
 
 <br>
@@ -47,7 +43,7 @@
   <div class="container">
 
     <label for="username"><b>Username</b></label>
-    <input type="text" placeholder="Enter Username" name="username" req>
+    <input type="text" placeholder="Enter Username" name="username" required="">
 
     <label for="password"><b>Password</b></label>
     <input type="password" name="password" placeholder="Enter Password" required="">
