@@ -66,6 +66,32 @@
 {% endwith %}
 
 {% if logged_in %}
+    {% if cracked|length > 0 %}
+        <h2>Cracked captures:</h2>
+        <table>
+            <tr>
+                <th>Wifi Name</th>
+                <th>Wifi MAC</th>
+                <th>HS Type</th>
+                <th>Date Added</th>
+                <th>Status</th>
+                <th>Password</th>
+                <th>Date Cracked</th>
+            </tr>
+            {% for handshake in cracked %}
+            <tr>
+                <td>{{ handshake[0] }}</td>
+                <td>{{ handshake[1] }}</td>
+                <td>{{ handshake[2] }}</td>
+                <td>{{ handshake[3] }}</td>
+                <td>{{ handshake[4] }}</td>
+                <td>{{ handshake[5] }}</td>
+                <td>{{ handshake[6] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <br>
+    {% endif %}
     {% if uncracked|length > 0 %}
         <h2>Uncracked captures:</h2>
         <table>
@@ -90,32 +116,6 @@
         </table>
     {% else %}
         <h2>No uncracked handshakes</h2>
-    {% endif %}
-    {% if cracked|length > 0 %}
-        <br>
-        <h2>Cracked captures:</h2>
-        <table>
-            <tr>
-                <th>Wifi Name</th>
-                <th>Wifi MAC</th>
-                <th>HS Type</th>
-                <th>Date Added</th>
-                <th>Status</th>
-                <th>Password</th>
-                <th>Date Cracked</th>
-            </tr>
-            {% for handshake in cracked %}
-            <tr>
-                <td>{{ handshake[0] }}</td>
-                <td>{{ handshake[1] }}</td>
-                <td>{{ handshake[2] }}</td>
-                <td>{{ handshake[3] }}</td>
-                <td>{{ handshake[4] }}</td>
-                <td>{{ handshake[5] }}</td>
-                <td>{{ handshake[6] }}</td>
-            </tr>
-            {% endfor %}
-        </table>
     {% endif %}
 {% else %}
     <h2>Please login first!</h2>
