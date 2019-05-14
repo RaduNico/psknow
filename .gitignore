@@ -5,8 +5,15 @@ cracker/dict/top_10mil_hibp.txt
 cracker/crack/hashcat.pot
 cracker/__pycache__
 cracker/handshakes/*
+!cracker/handshakes/.gitkeep
 cracker/logs/*
+!cracker/logs/.gitkeep
 cracker/.idea
+cracker/lefts
+cracker/dict/maskfiles/*
+!cracker/dict/maskfiles/.gitkeep
+cracker/escapes/*
+!cracker/escapes/.gitkeep
 
 backend/static/dic_lc_eng.txt
 backend/static/dic_lc_rom.txt
@@ -19,7 +26,9 @@ backend/secret_key
 backend/backendvenv
 backend/__pycache__
 backend/logs/*
+!backend/logs/.gitkeep
 backend/handshakes/*
+!backend/handshakes/.gitkeep
 backend/.idea
 
 helpers/sources/*
