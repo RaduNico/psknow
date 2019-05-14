@@ -71,13 +71,12 @@ class Cracker:
     crt_capture = None
     crt_process = None
     crt_workload = None
-    current_priority = None
     path_temp_file = None
     to_crack = None
     attack_command = None
     scrambler = None
     eta_dict = None
-    crt_dict_size = None
+    crt_rule = None
 
     @staticmethod
     def update_handshake(handshake_id, handshakes):
@@ -119,7 +118,7 @@ class Cracker:
             generator = "%s --min-length=8 --wordlist=%s --rules=Jumbo --stdout" %\
                 (Configuration.john_path, scrambler.get_high_value_tempfile())
 
-        elif rule["type"] == "wordlist" or rule["type"] == "mask_hashcat":
+        elif rule["type"] == "wordlist" or rule["type"] == "mask_hashcat" or rule["type"] == "filemask_hashcat":
             pass
 
         else:
@@ -134,6 +133,8 @@ class Cracker:
 
         if rule["type"] == "mask_hashcat":
             attack_command += " -a 3 " + rule["mask_hashcat"]
+        elif rule["type"] == "filemask_hashcat":
+            attack_command += " -a 3 " + rule["filemask_path"]
         else:
             attack_command += " -a 0"
 
@@ -254,7 +255,6 @@ class Cracker:
     def clean_variables():
         Cracker.crt_capture = None
         Cracker.crt_process = None
-        Cracker.current_priority = None
 
         # TODO create a tmp file directory so we can delete all tempfiles properly in case of crash
         if Cracker.path_temp_file is not None:
@@ -264,7 +264,7 @@ class Cracker:
         Cracker.attack_command = None
         Cracker.scrambler = None
         Cracker.eta_dict = None
-        Cracker.crt_dict_size = None
+        Cracker.crt_rule = None
 
     @staticmethod
     def seconds_to_time(seconds):
@@ -302,24 +302,28 @@ class Cracker:
         Cracker.eta_dict = new_eta_dict
         eta = "Error calculating ETA"
 
-        if Cracker.eta_dict["progress"] == -1 and Cracker.eta_dict["eta"] == "":
+        # TODO maksfile eta is not properly calculated because hashcat outputs eta for current queue
+        # TODO each mask has it's own queue
+        if Cracker.crt_rule["type"] == "filemansk_hashcat":
+            eta = "No ETA available"
+        elif Cracker.eta_dict["progress"] == -1 and Cracker.eta_dict["eta"] == "":
             eta = "Calculating ETA"
         elif Cracker.eta_dict["eta"] != "" and Cracker.eta_dict["eta"] != "(0 secs)":
             eta = Cracker.eta_dict["eta"]
         elif Cracker.eta_dict["speed"] != "" and Cracker.eta_dict["progress"] != -1:
             # For rules generated at runtime with variable base dictionary length we cannot calculate ETA
             # TODO implement rule 5 with hashcat only
-            if Cracker.crt_dict_size <= 0:
+            if Cracker.crt_rule["wordsize"] <= 0:
                 eta = "No ETA available"
             else:
                 # TODO speed could be in kH - adjust for that
                 speed = int(Configuration.atoi_regex.match(Cracker.eta_dict["speed"]).group())
                 if speed != 0:
-                    if Cracker.crt_dict_size < Cracker.eta_dict["progress"]:
+                    if Cracker.crt_rule["wordsize"] < Cracker.eta_dict["progress"]:
                         Configuration.myLogger.error("Dict size (%d) seems less than current attacked (%d)" %
-                                                     (Cracker.crt_dict_size, Cracker.eta_dict["progress"]))
+                                                     (Cracker.crt_rule["wordsize"], Cracker.eta_dict["progress"]))
 
-                    eta_seconds = (Cracker.crt_dict_size - Cracker.eta_dict["progress"]) / speed
+                    eta_seconds = (Cracker.crt_rule["wordsize"] - Cracker.eta_dict["progress"]) / speed
                     eta = Cracker.seconds_to_time(eta_seconds)
                 else:
                     eta = "Generating dict..."
@@ -327,7 +331,7 @@ class Cracker:
         for target in Cracker.crt_capture["handshakes"]:
             if target["active"] is True:
                 # Check if the eta already has the desired value in order to avoid an update
-                # Usually happens when 'Cracker.crt_dict_size <= 0'
+                # Usually happens when 'Cracker.crt_rule["wordsize"] <= 0'
                 if target["eta"] == eta:
                     return
                 target["eta"] = eta
@@ -364,13 +368,13 @@ class Cracker:
                                                             (target["SSID"], target["MAC"], cracked_pass))
                                 target["password"] = cracked_pass
                                 target["date_cracked"] = datetime.now()
-                                target["crack_level"] = Cracker.current_priority
+                                target["crack_level"] = Cracker.crt_rule["priority"]
                                 target["active"] = False
 
             # Iterate all targets and make them inactive
             for target in Cracker.crt_capture["handshakes"]:
                 if target["active"] is True:
-                    target["crack_level"] = Cracker.current_priority
+                    target["crack_level"] =Cracker.crt_rule["priority"]
                 target["active"] = False
 
             Cracker.update_handshake(Cracker.crt_capture["id"], Cracker.crt_capture["handshakes"])
@@ -389,6 +393,7 @@ class Cracker:
 
         # Nothing is running now....let's fix that!
         # TODO make a Scheduler class and move this code in a schedule function
+
         # TODO There is a bug that only happens when multiple handshakes are present in a file:
         # TODO The first element returned by the capture cursor will be the one with the lowest crack_level
         # TODO but it can be one with an already cracked password
@@ -416,10 +421,10 @@ class Cracker:
 
         # Memorize attack type - we need it to decode the output
         attack_type = target_handshake["handshake_type"]
-        rule, Cracker.current_priority = Configuration.get_next_rules_data(target_handshake["crack_level"])
+        Cracker.crt_rule = Configuration.get_next_rules_data(target_handshake["crack_level"])
 
         # Sanity check
-        die(rule is None, "No next rule found - target is curretly at maximum level!")
+        die(Cracker.crt_rule is None, "No next rule found - target is curretly at maximum level!")
 
         # Set attacked file base on file type - if it is a (p)cap we need to convert it
         if Cracker.crt_capture["file_type"] == "16800":
@@ -437,9 +442,7 @@ class Cracker:
 
         # Get commands needed to run hashcat
         generator_command, Cracker.attack_command, Cracker.scrambler =\
-            Cracker.get_attack_command(rule, attack_type, attacked_file, target_handshake["SSID"])
-
-        Cracker.crt_dict_size = rule["wordsize"]
+            Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_file, target_handshake["SSID"])
 
         Cracker.to_crack = list(filter(None, SingleProcess(Cracker.attack_command +
                                                            " --left").split_stdout()))
@@ -470,7 +473,7 @@ class Cracker:
 
         Cracker.update_handshake(Cracker.crt_capture["id"], Cracker.crt_capture["handshakes"])
 
-        Configuration.myLogger.info("Trying rule %d on %s" % (Cracker.current_priority, ', '.join(display_targets)))
+        Configuration.myLogger.info("Trying rule %d on %s" % (Cracker.crt_rule["priority"], ', '.join(display_targets)))
         if generator_command == "":
             Cracker.crt_process = SingleProcess(Cracker.attack_command)
         else:

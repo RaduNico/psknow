@@ -131,7 +131,7 @@ class Configuration(object):
         if next_rule is None:
             return None
 
-        return deepcopy(next_rule), next_rule_number
+        return deepcopy(next_rule)
 
 
 if __name__ == '__main__':
