@@ -481,10 +481,44 @@ class Cracker:
             Cracker.crt_process = DoubleProcess(generator_command, Cracker.attack_command)
 
     @staticmethod
+    def copy_remote_handshake(filename, dest):
+        remote_command = "scp %s:%s/%s %s" % (Configuration.backend_ip,
+                                              Configuration.backend_remote_handshake_path,
+                                              filename, dest)
+        proc = SingleProcess(remote_command, crit=False)
+        proc.generate_output()
+        if proc.poll() != 0:
+            Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
+                                           (remote_command, proc.stderr()))
+        return proc.poll()
+
+    @staticmethod
+    def delete_remote_handshake(filename):
+        remote_command = "ssh %s rm %s/%s" % (Configuration.backend_ip,
+                                              Configuration.backend_remote_handshake_path,
+                                              filename)
+        proc = SingleProcess(remote_command, crit=False)
+        proc.generate_output()
+        if proc.poll() != 0:
+            Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
+                                           (remote_command, proc.stderr()))
+        return proc.poll()
+
+    @staticmethod
     def get_new_handshakes():
         # TODO Check for identical duplicates!
-        filenames = [f for f in os.listdir(Configuration.backend_handshake_path) if
-                     path.isfile(path.join(Configuration.backend_handshake_path, f))]
+        if Configuration.backend_local:
+            filenames = [f for f in os.listdir(Configuration.backend_handshake_path) if
+                         path.isfile(path.join(Configuration.backend_handshake_path, f))]
+        else:
+            remote_command = "ssh %s ls %s" % (Configuration.backend_ip, Configuration.backend_remote_handshake_path)
+            process = SingleProcess(remote_command, crit=False, nolog=True)
+            process.generate_output()
+            if process.poll() != 0:
+                Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
+                                               (remote_command, process.stderr()))
+                return
+            filenames = process.stdout().split()
 
         # Relocate all files from webservice to final location
         for file in filenames:
@@ -492,10 +526,16 @@ class Cracker:
             document = Configuration.wifis.find_one({'path': file})
 
             if document is None:
+                # TODO this can overwrite files
                 Configuration.myLogger.warning("Found file '%s' "
                                                "which is not in database! Moving to escapes" % file)
-                os.rename(path.join(Configuration.backend_handshake_path, file),
-                          os.path.join(Configuration.escapes_path, file))
+                if Configuration.backend_local:
+                    os.rename(path.join(Configuration.backend_handshake_path, file),
+                              os.path.join(Configuration.escapes_path, file))
+                else:
+                    ret = Cracker.copy_remote_handshake(file, Configuration.escapes_path)
+                    if ret == 0:
+                        Cracker.delete_remote_handshake(file)
                 continue
 
             filename = file
@@ -512,7 +552,15 @@ class Cracker:
                     # document["location"]["address"] = #TODO get city/address based on coordinates
 
                     Configuration.myLogger.info("New handshake! Path is '%s'" % newpath)
-                    os.rename(path.join(Configuration.backend_handshake_path, file), newpath)
+                    if Configuration.backend_local:
+                        os.rename(path.join(Configuration.backend_handshake_path, file), newpath)
+                    else:
+                        ret = Cracker.copy_remote_handshake(file, newpath)
+                        if ret == 0:
+                            Cracker.delete_remote_handshake(file)
+                        else:
+                            Configuration.log_fatal("Error while copying files from remote location. "
+                                                    "Stopping to prevent further damage.")
                     break
                 number = number + 1
                 filename = file[:position] + str(number).rjust(3, '0') + file[position:]

@@ -184,11 +184,18 @@ class DoubleProcess(NoProcess):
 
         if type(snd_cmd) is str:
             snd_cmd = snd_cmd.split(' ')
-        self.snd_proc = Popen(snd_cmd, stdin=self.comm_r, stdout=self.snd_out_w, stderr=self.snd_err_w)
+        try:
+            self.snd_proc = Popen(snd_cmd, stdin=self.comm_r, stdout=self.snd_out_w, stderr=self.snd_err_w)
+        except Exception as e:
+            Configuration.log_fatal("Error while trying to run command '%s':\n%s" % (snd_cmd, e))
 
         if type(fst_cmd) is str:
             fst_cmd = fst_cmd.split(' ')
-        self.fst_proc = Popen(fst_cmd, stdin=DoubleProcess.get_devnull_r(), stdout=self.comm_w, stderr=self.fst_err_w)
+        try:
+            self.fst_proc = Popen(fst_cmd, stdin=DoubleProcess.get_devnull_r(),
+                                  stdout=self.comm_w, stderr=self.fst_err_w)
+        except Exception as e:
+            Configuration.log_fatal("Error while trying to run command '%s':\n%s" % (fst_cmd, e))
 
         self.fst_err_reader_thread.start()
         self.snd_err_reader_thread.start()
@@ -370,7 +377,7 @@ class SingleProcess(NoProcess):
 
         write_pipe.close()
 
-    def __init__(self, cmd, crit=True):
+    def __init__(self, cmd, crit=True, nolog=False):
         super(SingleProcess, self).__init__()
         if len(cmd) == 0:
             Configuration.log_fatal("Empty command '%s' send to SingleProcess" % cmd)
@@ -380,10 +387,11 @@ class SingleProcess(NoProcess):
         # Logging data
         self.cmd = cmd
 
-        if type(cmd) is str:
-            Configuration.myLogger.debug("Executing command: '%s'" % self.cmd)
-        else:
-            Configuration.myLogger.debug("Executing command: '%s'" % " ".join(self.cmd))
+        if not nolog:
+            if type(cmd) is str:
+                Configuration.myLogger.debug("Executing command: '%s'" % self.cmd)
+            else:
+                Configuration.myLogger.debug("Executing command: '%s'" % " ".join(self.cmd))
 
         # Output variables need to be mutable in order to modify them
         # from generic thread
@@ -419,7 +427,10 @@ class SingleProcess(NoProcess):
 
         if type(cmd) is str:
             cmd = cmd.split(' ')
-        self.proc = Popen(cmd, stdin=self.in_r, stdout=self.out_w, stderr=self.err_w)
+        try:
+            self.proc = Popen(cmd, stdin=self.in_r, stdout=self.out_w, stderr=self.err_w)
+        except Exception as e:
+            Configuration.log_fatal("Error while trying to run command '%s':\n%s" % (cmd, e))
 
         if self.in_writer_thread is not None:
             self.in_writer_thread.start()

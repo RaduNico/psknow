@@ -20,7 +20,10 @@ class Configuration(object):
     admin_table_name = "MainControlTable"
     default_hashcat_dict = {"progress": -1, "eta": "", "speed": ""}
 
-    # Handshake save folder
+    # Handshake related variables
+    backend_local = False
+    backend_ip = "127.0.0.1"
+    backend_remote_handshake_path = "/home/pandora/PycharmProjects/psknow/backend/handshakes"
     backend_handshake_path = '../backend/handshakes'
     handshake_path = 'handshakes'
 
@@ -99,6 +102,9 @@ class Configuration(object):
         Configuration.setup_logging()
         Configuration.database_conection()
         Configuration.read_rules()
+
+        if not Configuration.backend_local and Configuration.backend_ip == "":
+            Configuration.log_fatal("Backend is not local but location is not specified")
 
     @staticmethod
     def get_admin_table():
