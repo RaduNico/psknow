@@ -300,11 +300,12 @@ class Cracker:
             return
 
         Cracker.eta_dict = new_eta_dict
+        # TODO This message is wrongly displayed right around when a hashcat process stops
         eta = "Error calculating ETA"
 
         # TODO maksfile eta is not properly calculated because hashcat outputs eta for current queue
         # TODO each mask has it's own queue
-        if Cracker.crt_rule["type"] == "filemansk_hashcat":
+        if Cracker.crt_rule["type"] == "filemask_hashcat":
             eta = "No ETA available"
         elif Cracker.eta_dict["progress"] == -1 and Cracker.eta_dict["eta"] == "":
             eta = "Calculating ETA"
@@ -374,7 +375,7 @@ class Cracker:
             # Iterate all targets and make them inactive
             for target in Cracker.crt_capture["handshakes"]:
                 if target["active"] is True:
-                    target["crack_level"] =Cracker.crt_rule["priority"]
+                    target["crack_level"] = Cracker.crt_rule["priority"]
                 target["active"] = False
 
             Cracker.update_handshake(Cracker.crt_capture["id"], Cracker.crt_capture["handshakes"])
