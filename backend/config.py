@@ -6,7 +6,6 @@ from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 
-
 class Configuration(object):
     # Database Variables
     database_location = '192.168.14.3:27017'
@@ -191,8 +190,7 @@ class Configuration(object):
         # Check if handshake folder exists
         if not os.path.isdir(Configuration.save_file_location):
             Configuration.logger.info("Creating handshake folder hierarchy '%s'" % Configuration.save_file_location)
-            proc = Process("mkdir -p %s" % Configuration.save_file_location, crit=True)
-            proc.wait()
+            os.makedirs(Configuration.save_file_location)
 
         # Make sure the pot_path is empty
         with open(Configuration.empty_pot_path, "w") as _:
