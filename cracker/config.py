@@ -9,8 +9,12 @@ from pymongo import MongoClient
 
 class Configuration(object):
     # Database variables
-    database_location = 'mongodb://127.0.0.1:27017/'
+    database_location = '192.168.14.3:27017'
     database_name = "psknow"
+
+    # TODO move this in a private file
+    db_username = 'psknow'
+    db_password = 'Grtel5fmwvKcrxwoXWSTSEAcKRpeCAcgjG9Ty2A9'
 
     conn = None
     db = None
@@ -22,8 +26,8 @@ class Configuration(object):
 
     # Handshake related variables
     backend_local = False
-    backend_ip = "127.0.0.1"
-    backend_remote_handshake_path = "/home/pandora/PycharmProjects/psknow/backend/handshakes"
+    backend_ip = "192.168.14.3"
+    backend_remote_handshake_path = "~/sec/psknow/backend/handshakes"
     backend_handshake_path = '../backend/handshakes'
     handshake_path = 'handshakes'
 
@@ -58,9 +62,13 @@ class Configuration(object):
 
     @staticmethod
     def database_conection():
-        Configuration.conn = MongoClient(Configuration.database_location,
-                                         serverSelectionTimeoutMS=10,
-                                         connectTimeoutMS=20)
+        conn_loc = "mongodb://%s:%s@%s/%s" % \
+                   (Configuration.db_username, Configuration.db_password,
+                    Configuration.database_location, Configuration.database_name)
+        Configuration.myLogger.debug("Connecting at %s" % conn_loc)
+
+        Configuration.conn = MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
+
         Configuration.db = Configuration.conn[Configuration.database_name]
         Configuration.wifis = Configuration.db["wifis"]
         Configuration.admin = Configuration.db["admin"]

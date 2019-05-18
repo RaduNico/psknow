@@ -1,6 +1,7 @@
 import sys
 import re
 import logging
+import os
 from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
@@ -8,9 +9,13 @@ from copy import deepcopy
 
 class Configuration(object):
     # Database Variables
-    database_location = 'mongodb://127.0.0.1:27017/'
+    database_location = '192.168.14.3:27017'
     admin_account = "pandora"
     database_name = "psknow"
+
+    # TODO move this in a private file
+    db_username = 'psknow'
+    db_password = 'Grtel5fmwvKcrxwoXWSTSEAcKRpeCAcgjG9Ty2A9'
 
     conn = None
     db = None
@@ -161,9 +166,12 @@ class Configuration(object):
     @staticmethod
     def database_conection():
         try:
-            Configuration.conn = MongoClient(Configuration.database_location,
-                                             serverSelectionTimeoutMS=10,
-                                             connectTimeoutMS=20)
+            conn_loc = "mongodb://%s:%s@%s/%s" %\
+                       (Configuration.db_username, Configuration.db_password,
+                        Configuration.database_location, Configuration.database_name)
+            Configuration.logger.debug("Connecting at %s" % conn_loc)
+
+            Configuration.conn = MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
             Configuration.db = Configuration.conn[Configuration.database_name]
             Configuration.wifis = Configuration.db["wifis"]
             Configuration.users = Configuration.db["users"]
@@ -172,7 +180,6 @@ class Configuration(object):
             Configuration.check_db_conn()
         except Exception as e:
             Configuration.logger.critical("Could not establish initial connection with error %s" % e)
-            eprint("Could not establish initial connection with error %s" % e)
             sleep(10)
             sys.exit(-1)
 
@@ -180,6 +187,12 @@ class Configuration(object):
     def initialize():
         # Establish database connection
         Configuration.database_conection()
+
+        # Check if handshake folder exists
+        if not os.path.isdir(Configuration.save_file_location):
+            Configuration.logger.info("Creating handshake folder hierarchy '%s'" % Configuration.save_file_location)
+            proc = Process("mkdir -p %s" % Configuration.save_file_location, crit=True)
+            proc.wait()
 
         # Make sure the pot_path is empty
         with open(Configuration.empty_pot_path, "w") as _:
