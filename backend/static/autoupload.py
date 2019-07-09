@@ -74,6 +74,8 @@ def send_file(file_name):
 		if match is not None:
 			url_decode = match.group(1).replace("&#39;", "'")
 			success(url_decode)
+			# Uncomment if you want to delete file after upload
+			# os.remove(file_name)
 			return
 
 		fatal("Unspecified error: %s" % ret.text)
