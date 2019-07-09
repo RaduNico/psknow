@@ -286,7 +286,7 @@ def register():
             return redirect(request.url)
 
         if len(password) < 6:
-            flash("C'mon... use at leat 6 characters... pretty please?")
+            flash("C'mon... use at least 6 characters... pretty please?")
             return redirect(request.url)
 
         if Configuration.username_regex.search(username) is None:
