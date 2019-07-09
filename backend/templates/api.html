@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PSKnow</title>
+  <style>
+
+  button {
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 8px 8px;
+    border: none;
+    cursor: pointer;
+    width: auto;
+  }
+
+  button:hover {
+    opacity: 0.8;
+  }
+
+  button > img,
+  button > span {
+    vertical-align: middle;
+  }
+  </style>
+  <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+</head>
+<body>
+
+
+<ul class=navbar>
+  <li><a href='/'>Home</a></li>
+  <li><a href='/upload/'>Upload</a></li>
+  {% if logged_in %}
+  <li><a href='/statuses/'>Statuses</a></li>
+  <li style="float:right"><a href='/logout/'>Logout</a></li>
+  {% else %}
+  <li style="float:right"><a href='/register/'>Register</a></li>
+  <li style="float:right"><a href='/login/'>Login</a></li>
+  {% endif %}
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+
+<div class="box">
+  <form method="get" action="/api/autoupload.py">
+    <button type="submit">
+      <img alt="Embedded Image" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAMAAAD04JH5AAAAA3NCSVQICAjb4U/gAAAACXBIWXMAADsZAAA7GQHX5hc2AAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAXRQTFRF////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARmHy3gAAAHt0Uk5TAAECAwQFBgcICgsMDhITFRkbHh8gISMnKC4vMDI0NjpBQ0hKS01OUFFXWF9gY2RlaWptbnBxdXl6e36AgYOGiIuMlJWXmJ2foKWqq62usLG1tru8vb7Bw8THycvMz9PU1tfa297f4OTm6Onr7O3u7/Dx8/T29/j6+/z+n7d/pgAAAfRJREFUeNrt2mVTAmEYheFn7Qa7Cwtb7O5W7O7uxHb/vM6Kiku4y7zhjOd85Mt9DbD77gwQBbHS1XvVexfDESRol6rvFYkC+OmrVQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/HjDV4bG6dHZBS83gj6nG1sYMMKQGtRZmgOLXYPq7kew+g+4g+k95DL91ITPmAQ1Mv/dxO2b7E4yvvLRLc/29ONbXfsGzmf59Fvu7T50ZQDWP+9+A8f4olxtw2LzR/lY0nyMgft9Y35VOnJZxYwhQQdxmezHQHyCOa/q9v873B9zh3/pXKVz7FLEcuP9aQpxnOQoI6CHuy3QF6M+F8gdQmf/Hk6MEErFWf/2HHBKzMT+ASkF9ilrz2e8nYbMe++ivhIsDUK73v1hOrCRy5V4Pwfkkdl06gENwn5TJH/0REr6YTY/+RpR4ACWdffXPk0nG8h/d/ZdCkrNKN6CZZK1X649L61OI872/HSsPQEr9TKfMPpvVNurG7ZpK1pdqtZdP9bd1Gy+ATV86BQAAAAAAAAAAAAAAAAAAAOCPAhzZnOYwCBA3AAAA4I8ADuUBDjTAtDyAUwO0ywO0+D4ixK1AAyjzsvqz7lMy6VZO/zrx85y2u2T07+zfTwopC+L7i6mezyqKvW9J4NvgWuqzKx/lNwOa2TEY6UFPAAAAAElFTkSuQmCC" width="20" height="20"/>
+      <span>Download automatic uploader</span>
+    </button>
+  </form>
+</div>
+
+
+
+</body>
+</html>

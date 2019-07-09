@@ -323,6 +323,13 @@ def send_logreg():
     return application.send_static_file("log_reg.css")
 
 
+@application.route('/api/autoupload.py', methods=['GET'])
+@login_required
+@not_admin
+def send_autoupload():
+    return application.send_static_file("autoupload.py")
+
+
 @application.route('/dict', methods=["GET"])
 def send_dict():
     dict_name = request.args.get("dict")
@@ -496,6 +503,13 @@ def check_handshake(file_path, filename):
 
         return True, entry_values
     return False, None
+
+
+@application.route('/api/', methods=['GET'])
+@login_required
+@not_admin
+def main_api():
+    return render_template('api.html')
 
 
 @application.route('/upload/', methods=['GET', 'POST'])
