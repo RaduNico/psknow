@@ -290,7 +290,7 @@ def register():
             return redirect(request.url)
 
         if Configuration.username_regex.search(username) is None:
-            flash("Username should start with a letter and only contain alphanumeric characters!")
+            flash("Username should start with a letter and only contain alphanumeric or '-._' characters!")
             return redirect(request.url)
 
         if len(username) > 150 or len(password) > 150:

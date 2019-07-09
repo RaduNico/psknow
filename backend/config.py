@@ -62,7 +62,7 @@ class Configuration(object):
 
     # Handshake verification
     pmkid_regex = re.compile("^[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)[\n]?$")
-    username_regex = re.compile("^[a-zA-Z][0-9a-zA-Z]*$")
+    username_regex = re.compile("^[a-zA-Z][-_.0-9a-zA-Z]*$")
     hashcat_left_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*](.*)[\n]?$")
     # aircrack_regex = re.compile("^ {0,3}[0-9]{0,3} {2}([0-9A-Fa-f:]{17}) {2}(.*) {2}"
     #                             "(None \\([0-9]*\\.[0-9]*\\.[0-9]*\\.[0-9]*\\)|"
