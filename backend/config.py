@@ -6,6 +6,7 @@ from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 
+
 class Configuration(object):
     # Database Variables
     database_location = '192.168.14.3:27017'

@@ -414,10 +414,31 @@ def get_hccapx_file(attack_type, filepath):
     return temp_filename
 
 
+def duplicate_lookup(mac, ssid):
+    try:
+        duplicates = Configuration.wifis.find({"handshakes.SSID": ssid, "handshakes.MAC": mac})
+        Configuration.logger.info("Duplication lookup for '%s-%s'" % (ssid, mac))
+    except Exception as e:
+        Configuration.logger.error(
+            "Database error at retrieving duplication for '%s-%s' %s" % (SSID, MAC, e))
+        flash("Server error at duplication data.")
+        return None, True
+
+    # TODO allow PMKID if only a handshake exists
+    if len(list(duplicates)) > 0:
+        flash("A PMKID/handshake for pair MAC-SSID: '%s-%s' already exists!" % (mac, ssid), category='warning')
+        return True, False
+
+    return False, False
+
+
 # TODO change this to proper file type check - use file or directly detect magic numbers
 def check_handshake(file_path, filename):
     entry_values = dict()
     entry_values["handshakes"] = []
+
+    duplicate_pair = set()
+    duplicate_flag = False
 
     # We add: file_type, handshake[SSID, MAC, open, handshake_type]
     # We will add later: handshake[crack_level, password, date_cracked]
@@ -442,12 +463,15 @@ def check_handshake(file_path, filename):
                 handshake["MAC"] = ":".join(a + b for a, b in zip(matchobj.group(1)[::2], matchobj.group(1)[1::2]))
                 handshake["SSID"] = bytearray.fromhex(matchobj.group(2)).decode()
                 handshake["handshake_type"] = "PMKID"
-                entry_values["handshakes"].append(handshake)
 
-        if len(entry_values["handshakes"]) == 0:
-            flash("Error! File '%s' does not contain a valid PMKID!" % filename)
-            return False, None
-        return True, entry_values
+                is_duplicate, error = duplicate_lookup(handshake["MAC"], handshake["SSID"])
+                if error:
+                    return False, None
+                if is_duplicate:
+                    duplicate_flag = True
+                    continue
+
+                entry_values["handshakes"].append(handshake)
 
     if filename.endswith((".cap", ".pcap", ".pcapng")):
         # We count how many already cracked files we got
@@ -465,14 +489,14 @@ def check_handshake(file_path, filename):
             show_command = "hashcat --potfile-path=%s --left %s %s" % \
                            (Configuration.empty_pot_path, crack_type, temp_filename)
 
-            # Test with hashcat if we already cracked the files
+            # Test with hashcat if files contain valid data
             to_crack = list(filter(None, Process(show_command, crit=True).stdout().split('\n')))
 
             for cracked_target in to_crack:
                 cracker_obj = Configuration.hashcat_left_regex.match(cracked_target)
 
                 if cracker_obj is None:
-                    Configuration.logger.error("REGEX error! Could not match the left line")
+                    Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
                     continue
 
                 mac = ":".join(a + b for a, b in zip(cracker_obj.group(1)[::2], cracker_obj.group(1)[1::2]))
@@ -490,19 +514,36 @@ def check_handshake(file_path, filename):
                 handshake["MAC"] = mac
                 if hs_type == "PMKID":
                     handshake["SSID"] = bytearray.fromhex(cracker_obj.group(2)).decode()
+                    if handshake["SSID"].startswith("$HEX[") and handshake["SSID"].endswith("]"):
+                        handshake["SSID"] = handshake["SSID"][5:-1].decode("hex")
                 else:
                     handshake["SSID"] = cracker_obj.group(2)
                 handshake["handshake_type"] = hs_type
+
+                # Avoid duplicate 'duplicate message' for files with both PMKID and handshakes
+                if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
+                    continue
+
+                is_duplicate, error = duplicate_lookup(handshake["MAC"], handshake["SSID"])
+                if error:
+                    return False, None
+                if is_duplicate:
+                    duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
+                    duplicate_flag = True
+                    continue
+
                 entry_values["handshakes"].append(handshake)
 
             os.remove(temp_filename)
 
-        if len(entry_values["handshakes"]) == 0:
+    if len(entry_values["handshakes"]) == 0:
+        if not duplicate_flag:
             flash("Error! File '%s' does not contain a valid handshake" % filename)
-            return False, None
+            return False, None, False
+        
+        return False, None, True
 
-        return True, entry_values
-    return False, None
+    return True, entry_values, False
 
 
 @application.route('/api/', methods=['GET'])
@@ -552,7 +593,11 @@ def upload_file():
             file.save(tmp_path)
 
             # Validate handshake and get file type and handshake type
-            valid_handshake, extra_info = check_handshake(tmp_path, file.filename)
+            valid_handshake, extra_info, duplicate_flag = check_handshake(tmp_path, file.filename)
+
+            if duplicate_flag:
+                continue
+
             if not valid_handshake:
                 Configuration.logger.info("No valid handshake found in file '%s'" % filename)
                 flash("No valid handshake found in file '%s'" % filename)

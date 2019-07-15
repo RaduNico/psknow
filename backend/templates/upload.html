@@ -26,7 +26,11 @@
 						<div style='color:green'>
 						{{ message }}
 						</div>
-						{% else%}
+						{% elif type == 'warning' %}
+						<div style='color:OrangeRed'>
+						{{ message }}
+						</div>
+						{% else %}
 						<div style='color:red'>
 						{{ message }}
 						</div>
