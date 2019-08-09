@@ -13,13 +13,13 @@ from copy import deepcopy
 
 from werkzeug.exceptions import abort
 
-from config import Configuration
+from .config import Configuration
 from flask import Flask, render_template, request, redirect, flash, url_for
 from functools import wraps
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from process import Process
-from user import User
+from .process import Process
+from .user import User
 
 application = Flask(__name__)
 
@@ -420,7 +420,7 @@ def duplicate_lookup(mac, ssid):
         Configuration.logger.info("Duplication lookup for '%s-%s'" % (ssid, mac))
     except Exception as e:
         Configuration.logger.error(
-            "Database error at retrieving duplication for '%s-%s' %s" % (SSID, MAC, e))
+            "Database error at retrieving duplication for '%s-%s' %s" % (ssid, mac, e))
         flash("Server error at duplication data.")
         return None, True
 
