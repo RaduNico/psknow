@@ -13,13 +13,15 @@ from copy import deepcopy
 
 from werkzeug.exceptions import abort
 
-from .config import Configuration
+from config import Configuration
+from process import Process
+from user import User
+
 from flask import Flask, render_template, request, redirect, flash, url_for
 from functools import wraps
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from .process import Process
-from .user import User
+
 
 application = Flask(__name__)
 
@@ -323,13 +325,6 @@ def send_logreg():
     return application.send_static_file("log_reg.css")
 
 
-@application.route('/api/autoupload.py', methods=['GET'])
-@login_required
-@not_admin
-def send_autoupload():
-    return application.send_static_file("autoupload.py")
-
-
 @application.route('/dict', methods=["GET"])
 def send_dict():
     dict_name = request.args.get("dict")
@@ -544,13 +539,6 @@ def check_handshake(file_path, filename):
         return False, None, True
 
     return True, entry_values, False
-
-
-@application.route('/api/', methods=['GET'])
-@login_required
-@not_admin
-def main_api():
-    return render_template('api.html')
 
 
 @application.route('/upload/', methods=['GET', 'POST'])

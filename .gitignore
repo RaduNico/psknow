@@ -8,7 +8,6 @@ cracker/handshakes/*
 !cracker/handshakes/.gitkeep
 cracker/logs/*
 !cracker/logs/.gitkeep
-cracker/.idea
 cracker/lefts
 cracker/dict/maskfiles/*
 !cracker/dict/maskfiles/.gitkeep
@@ -29,6 +28,8 @@ backend/logs/*
 !backend/logs/.gitkeep
 backend/handshakes/*
 !backend/handshakes/.gitkeep
-backend/.idea
 
 helpers/sources/*
+
+*/.idea/
+.idea/

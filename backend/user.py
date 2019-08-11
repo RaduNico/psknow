@@ -2,8 +2,18 @@ import bcrypt
 import base64
 import hashlib
 
-from flask_login import UserMixin
 from config import Configuration
+
+from flask_login import UserMixin
+from copy import deepcopy
+
+
+user_template = {
+    "username": "",
+    "password": "",
+    "allow_api": False,
+    "api_keys": []
+}
 
 
 def preprocess_password(password):
@@ -39,7 +49,9 @@ class User(UserMixin):
         user = list(Configuration.users.find({"username": username}))
 
         if len(user) == 0:
-            new_user = {"username": username, "password": enc_bcrypt(password)}
+            new_user = deepcopy(user_template)
+            new_user["username"] = username
+            new_user["password"] = enc_bcrypt(password)
 
             try:
                 obj = Configuration.users.insert_one(new_user)

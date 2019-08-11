@@ -2,13 +2,21 @@ from backend import application
 from config import Configuration
 from secrets import token_urlsafe
 
-# TODO check key/file existence and generate one from /dev/random of it does not exist
-try:
-    with open("secret_key", "r") as sc_fd:
-        application.secret_key = "".join(sc_fd.readlines())
-except FileNotFoundError:
-    application.secret_key = token_urlsafe(90)
-    with open("secret_key", "w") as sc_fd:
-        sc_fd.write(application.secret_key)
+
+def get_key_from_file(filename):
+    try:
+        with open(filename, "r") as sc_fd:
+            key = "".join(sc_fd.readlines())
+    except FileNotFoundError:
+        key = token_urlsafe(150)
+        with open(filename, "w") as sc_fd:
+            sc_fd.write(application.secret_key)
+
+    return key
+
+
+application.secret_key = get_key_from_file("keys/secret_key")
+application.api_secret_key = get_key_from_file("keys/api_secret_key")
+
 application.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 Configuration.initialize()
