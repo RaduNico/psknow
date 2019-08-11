@@ -2,9 +2,11 @@ import sys
 import re
 import logging
 import os
+
 from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
+from secrets import token_urlsafe
 
 
 class Configuration(object):
@@ -84,6 +86,21 @@ class Configuration(object):
     # Logging variables
     logger = None
     logLevel = logging.DEBUG
+
+    # Secret keys
+    api_secret_key = None
+
+    @staticmethod
+    def get_key_from_file(filename):
+        try:
+            with open(filename, "r") as sc_fd:
+                key = "".join(sc_fd.readlines())
+        except FileNotFoundError:
+            key = token_urlsafe(150)
+            with open(filename, "w") as sc_fd:
+                sc_fd.write(key)
+
+        return key
 
     # TODO Maybe attempt restoration. Change value returned by get_admin_table() if restoration succeeds
     @staticmethod

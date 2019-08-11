@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-
 import os
-import logging
 import random
 import string
 import datetime
@@ -16,19 +13,11 @@ from werkzeug.exceptions import abort
 from config import Configuration
 from process import Process
 from user import User
+from wrappers import is_admin, requires_admin, not_admin
 
-from flask import Flask, render_template, request, redirect, flash, url_for
-from functools import wraps
+from flask import render_template, request, redirect, flash, url_for, Blueprint
 from werkzeug.utils import secure_filename
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-
-
-application = Flask(__name__)
-
-
-login_manager = LoginManager()
-login_manager.init_app(application)
-login_manager.login_view = 'login'
+from flask_login import login_user, logout_user, login_required, current_user
 
 
 def die(condition, message):
@@ -38,35 +27,7 @@ def die(condition, message):
         sys.exit(-1)
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User(user_id)
-
-
-def is_admin(user):
-    return user is not None and user.is_authenticated and user.get_id() == Configuration.admin_account
-
-
-def requires_admin(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if is_admin(current_user):
-            return f(*args, **kwargs)
-        return redirect(url_for("home"))
-
-    return decorated_function
-
-
-def not_admin(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not is_admin(current_user):
-            return f(*args, **kwargs)
-
-        flash("Not permitted for admin account!")
-        return redirect(url_for("home"))
-
-    return decorated_function
+blob_api = Blueprint('blob_api', __name__)
 
 
 def get_cracked_tuple(handshake, document):
@@ -100,7 +61,7 @@ def get_uncracked_tuple(handshake, document):
     return ssid, mac, hs_type, date_added, crack_level, eta
 
 
-@application.route('/admin/', methods=['GET', 'POST'])
+@blob_api.route('/admin/', methods=['GET', 'POST'])
 @requires_admin
 def admin_panel():
     if request.method == 'GET':
@@ -138,7 +99,7 @@ def admin_panel():
         abort(404)
 
 
-@application.route('/', methods=['GET'])
+@blob_api.route('/', methods=['GET'])
 def home():
     if is_admin(current_user):
         if check_db_conn() is None:
@@ -224,7 +185,7 @@ def get_rule_tuple(rule):
     return priority, name, desc, examples, link
 
 
-@application.route('/statuses/', methods=['GET'])
+@blob_api.route('/statuses/', methods=['GET'])
 @login_required
 def statuses():
     status_list = []
@@ -235,7 +196,7 @@ def statuses():
     return render_template('statuses.html', statuses=status_list)
 
 
-@application.route('/login/', methods=['GET', 'POST'])
+@blob_api.route('/login/', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         flash("User is already authenticated!")
@@ -267,7 +228,7 @@ def login():
         return redirect(url_for("home"))
 
 
-@application.route("/register/", methods=["GET", "POST"])
+@blob_api.route("/register/", methods=["GET", "POST"])
 def register():
     if request.method == 'GET':
         if current_user.is_authenticated:
@@ -308,32 +269,11 @@ def register():
         return redirect(request.url)
 
 
-@application.route('/logout/', methods=["GET"])
+@blob_api.route('/logout/', methods=["GET"])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for("home"))
-
-
-@application.route('/css/navbar.css', methods=["GET"])
-def send_navbar():
-    return application.send_static_file("navbar.css")
-
-
-@application.route('/css/log_reg.css', methods=["GET"])
-def send_logreg():
-    return application.send_static_file("log_reg.css")
-
-
-@application.route('/dict', methods=["GET"])
-def send_dict():
-    dict_name = request.args.get("dict")
-    if dict_name is None or dict_name == "" or dict_name not in Configuration.dictionary_names:
-        flash("Bad dictionary request!")
-        Configuration.logger.warning("Bad dictionary request at link %s" % request.args.get("dict"))
-        return redirect(url_for("statuses"))
-
-    return application.send_static_file(dict_name)
 
 
 def check_db_conn():
@@ -541,7 +481,7 @@ def check_handshake(file_path, filename):
     return True, entry_values, False
 
 
-@application.route('/upload/', methods=['GET', 'POST'])
+@blob_api.route('/upload/', methods=['GET', 'POST'])
 @login_required
 @not_admin
 def upload_file():
@@ -631,20 +571,3 @@ def upload_file():
 
             flash("File '%s' uploaded successfully!" % filename, category='success')
         return redirect(request.url)
-
-
-if __name__ == "__main__":
-    # Manually initialize app
-    # TODO check key/file existence and generate one from /dev/random of it does not exist
-    with open("secret_key", "r") as sc_fd:
-        application.secret_key = "".join(sc_fd.readlines())
-    application.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
-
-    Configuration.initialize()
-    Configuration.logger = application.logger
-    application.run(host='127.0.0.1', port='9645')
-else:
-    gunicorn_logger = logging.getLogger('gunicorn.error')
-    application.logger.handlers = gunicorn_logger.handlers
-    application.logger.setLevel(gunicorn_logger.level)
-    Configuration.logger = application.logger
