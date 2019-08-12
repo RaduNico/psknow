@@ -22,6 +22,34 @@
   button > span {
     vertical-align: middle;
   }
+
+      table {
+      border-collapse: collapse;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    td:last-child, th:last-child {
+     text-align: right;
+    }
+
+    tr:nth-child(even){background-color: #6ec071}
+    tr:nth-child(odd){background-color: #93cf95}
+
+    th {
+      background-color: #357a38;
+      color: white;
+    }
+
+    tr:hover td {
+      background-color: #459c48;
+    }
+
   </style>
   <link rel="stylesheet" type="text/css" href="/css/navbar.css">
 </head>
@@ -61,6 +89,7 @@
 
 
 <div class="box">
+  <h3> Script for auto-uploading handshakes/PMKIDs </h3>
   <form method="get" action="/api/autoupload.py">
     <button type="submit">
       <img alt="Embedded Image" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAMAAAD04JH5AAAAA3NCSVQICAjb4U/gAAAACXBIWXMAADsZAAA7GQHX5hc2AAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAXRQTFRF////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARmHy3gAAAHt0Uk5TAAECAwQFBgcICgsMDhITFRkbHh8gISMnKC4vMDI0NjpBQ0hKS01OUFFXWF9gY2RlaWptbnBxdXl6e36AgYOGiIuMlJWXmJ2foKWqq62usLG1tru8vb7Bw8THycvMz9PU1tfa297f4OTm6Onr7O3u7/Dx8/T29/j6+/z+n7d/pgAAAfRJREFUeNrt2mVTAmEYheFn7Qa7Cwtb7O5W7O7uxHb/vM6Kiku4y7zhjOd85Mt9DbD77gwQBbHS1XvVexfDESRol6rvFYkC+OmrVQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/HjDV4bG6dHZBS83gj6nG1sYMMKQGtRZmgOLXYPq7kew+g+4g+k95DL91ITPmAQ1Mv/dxO2b7E4yvvLRLc/29ONbXfsGzmf59Fvu7T50ZQDWP+9+A8f4olxtw2LzR/lY0nyMgft9Y35VOnJZxYwhQQdxmezHQHyCOa/q9v873B9zh3/pXKVz7FLEcuP9aQpxnOQoI6CHuy3QF6M+F8gdQmf/Hk6MEErFWf/2HHBKzMT+ASkF9ilrz2e8nYbMe++ivhIsDUK73v1hOrCRy5V4Pwfkkdl06gENwn5TJH/0REr6YTY/+RpR4ACWdffXPk0nG8h/d/ZdCkrNKN6CZZK1X649L61OI872/HSsPQEr9TKfMPpvVNurG7ZpK1pdqtZdP9bd1Gy+ATV86BQAAAAAAAAAAAAAAAAAAAOCPAhzZnOYwCBA3AAAA4I8ADuUBDjTAtDyAUwO0ywO0+D4ixK1AAyjzsvqz7lMy6VZO/zrx85y2u2T07+zfTwopC+L7i6mezyqKvW9J4NvgWuqzKx/lNwOa2TEY6UFPAAAAAElFTkSuQmCC" width="20" height="20"/>
@@ -69,7 +98,37 @@
   </form>
 </div>
 
+{% if allow_api %}
+  <form action="/api/generate-key/" method="POST">
+    <div class="container">
+      <br>
+      <br>
+      <h2> Generate a new API key: </h2>
+      <label for="Keyname"><b>Keyname</b></label>
+      <input type="text" placeholder="Enter API key name" name="keyname" required="">
+      <button type="submit">Generate API key</button>
+    </div>
+  </form>
 
-
+  {% if api_keys|length > 0 %}
+      <h2>API Keys:</h2>
+      <table>
+          <tr>
+              <th>Key name</th>
+              <th>Date Generated</th>
+              <th>API Key</th>
+          </tr>
+          {% for api_key in api_keys %}
+          <tr>
+              <td>{{ api_key["name"] }}</td>
+              <td>{{ api_key["date_generated"] }}</td>
+              <td>{{ api_key["key"] }}</td>
+          </tr>
+          {% endfor %}
+      </table>
+  {% else %}
+      <h2>No API keys exist</h2>
+  {% endif %}
+{% endif %}
 </body>
 </html>

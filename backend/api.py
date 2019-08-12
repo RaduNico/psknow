@@ -36,6 +36,14 @@ def allowed_api(f):
     return decorated_function
 
 
+def jwt_decode(token, api_key):
+    return jwt.decode(token.encode("utf-8"), api_key)
+
+
+def jwt_encode(dic, api_key):
+    return jwt.encode(dic, api_key, algorithm='HS512').decode("utf-8")
+
+
 @api_api.route('/api/', methods=['GET'])
 @login_required
 @not_admin
@@ -54,12 +62,19 @@ def main_api():
     api_keys = []
     try:
         for key in user_entry["api_keys"]:
-            entry = dict()
-            entry["key"] = key
+            if len(key) > 1:
+                Configuration.logger.error("More than one entry in API dictionary: %s" % key)
+                continue
 
-            values = jwt.decode(key, Configuration.api_secret_key)
+            entry = dict()
+
+            entry["key"] = list(key.values())[0]
+
+            values = jwt_decode(entry["key"], Configuration.api_secret_key)
             entry["name"] = values["name"]
-            entry["date_generated"] = values["date_generated"]
+            Configuration.logger.warning(values["date_generated"])   # 2019-08-12T01:35:15.431092
+            entry["date_generated"] = datetime.datetime.strptime(values["date_generated"], '%Y-%m-%dT%H:%M:%S.%f')\
+                .strftime('%H:%M - %d.%m.%Y')
 
             api_keys.append(entry)
     except KeyError:
@@ -82,38 +97,39 @@ def generate_key():
     api_key = deepcopy(key_template)
 
     # TODO make a try except
-    user_entry = Configuration.users.find_one({"username": current_user.get_id()})
+    crt_user = current_user.get_id()
+    user_entry = Configuration.users.find_one({"username": crt_user})
 
     # Check if user is authorised to use an API
     try:
         if user_entry["allow_api"] is not True:
             flash("Forbidden!")
-            return redirect(url_for('main_api'))
+            return redirect(url_for('api_api.main_api'))
     except KeyError:
         Configuration.logger.error("User entry does not contain 'allow_api' key: %s" % user_entry)
         flash("Server error!")
-        return redirect(url_for('main_api'))
+        return redirect(url_for('api_api.main_api'))
 
     try:
-        new_id = 1000 + len(user_entry["api_keys"])
+        new_id = str(1000 + len(user_entry["api_keys"]))
     except KeyError:
         Configuration.logger.error("User entry does not contain 'api_keys' key: %s" % user_entry)
         flash("Server error!")
-        return redirect(url_for('main_api'))
+        return redirect(url_for('api_api.main_api'))
 
     # Generate key from user + date_generated + key id + name
-    api_key["user"] = current_user.get_id()
-    api_key["date_generated"] = datetime.datetime.now()
+    api_key["user"] = crt_user
+    api_key["date_generated"] = datetime.datetime.now().isoformat()
     api_key["key_id"] = new_id
-    api_key["name"] = "muiepula"  # Todo get from user
-    Configuration.logger.warning(api_key)
-    enc_api_key = jwt.encode(api_key, Configuration.api_secret_key, algorithm='HS512')
+    api_key["name"] = request.form.get("keyname", "unnamed")
+
+    user_entry["api_keys"].append({new_id: jwt_encode(api_key, Configuration.api_secret_key)})
 
     # TODO make a try except
-    user_entry["api_keys"].append({new_id: enc_api_key})
+    Configuration.users.update_one({"username": crt_user}, {"$set": user_entry})
     flash("API key generated successfully!", category='success')
 
-    return redirect(url_for('main_api'))
+    return redirect(url_for('api_api.main_api'))
 
 
 @api_api.route('/api/v1/getwork', methods=['GET'])
