@@ -200,7 +200,7 @@ def statuses():
 def login():
     if current_user.is_authenticated:
         flash("User is already authenticated!")
-        return redirect(url_for("home"))
+        return redirect(url_for("blob_api.home"))
 
     if request.method == 'GET':
         return render_template('login.html')
@@ -225,7 +225,7 @@ def login():
 
         login_user(User(username))
 
-        return redirect(url_for("home"))
+        return redirect(url_for("blob_api.home"))
 
 
 @blob_api.route("/register/", methods=["GET", "POST"])
@@ -233,7 +233,7 @@ def register():
     if request.method == 'GET':
         if current_user.is_authenticated:
             flash("You are already have an account")
-            return redirect(url_for("home"))
+            return redirect(url_for("blob_api.home"))
         return render_template('register.html')
 
     if request.method == "POST":
@@ -263,7 +263,7 @@ def register():
         retval = User.create_user(username, password)
 
         if retval is None:
-            return redirect(url_for("home"))
+            return redirect(url_for("blob_api.home"))
 
         flash(retval)
         return redirect(request.url)
@@ -273,7 +273,7 @@ def register():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("home"))
+    return redirect(url_for("blob_api.home"))
 
 
 def check_db_conn():

@@ -16,7 +16,7 @@ application.register_blueprint(api_api)
 
 login_manager = LoginManager()
 login_manager.init_app(application)
-login_manager.login_view = 'login'
+login_manager.login_view = 'blob_api.login'
 
 
 @login_manager.user_loader
