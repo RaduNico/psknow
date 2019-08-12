@@ -34,6 +34,11 @@ def send_logreg():
     return send_from_directory(application.static_folder, "log_reg.css")
 
 
+@application.route('/css/table.css', methods=["GET"])
+def send_table():
+    return send_from_directory(application.static_folder, "table.css")
+
+
 @application.route('/dict', methods=["GET"])
 def send_dict():
     dict_name = request.args.get("dict")
