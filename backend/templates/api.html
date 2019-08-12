@@ -75,41 +75,39 @@
   </form>
 </div>
 
-{% if allow_api %}
-  <form action="/api/generate-key/" method="POST">
-    <div class="container">
-      <br>
-      <br>
-      <h2> Generate a new API key: </h2>
-      <label for="Keyname"><b>Keyname</b></label>
-      <input type="text" placeholder="Enter API key name" name="keyname" required="">
-      <button type="submit">Generate API key</button>
-    </div>
-  </form>
+<form action="/api/generate-key/" method="POST">
+<div class="container">
+  <br>
+  <br>
+  <h2> Generate a new API key: </h2>
+  <label for="Keyname"><b>Keyname</b></label>
+  <input type="text" placeholder="Enter API key name" name="keyname" required="">
+  <button type="submit">Generate API key</button>
+</div>
+</form>
 
-  {% if api_keys|length > 0 %}
-      <h2>API Keys:</h2>
-      <div>
-        <table class="autosize">
-            <tr>
-                <th>Key name</th>
-                <th>Date Generated</th>
-                <th>API Key</th>
-            </tr>
-            {% for api_key in api_keys %}
-            <tr>
-                <td>{{ api_key["name"] }}</td>
-                <td>{{ api_key["date_generated"] }}</td>
-                <td>
-                  <input type="text" value='{{ api_key["key"] }}' onClick="this.select();" readonly dir="rtl">
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-      </div>
-  {% else %}
-      <h2>No API keys exist</h2>
-  {% endif %}
+{% if api_keys|length > 0 %}
+  <h2>API Keys:</h2>
+  <div>
+    <table class="autosize">
+        <tr>
+            <th>Key name</th>
+            <th>Date Generated</th>
+            <th>API Key</th>
+        </tr>
+        {% for api_key in api_keys %}
+        <tr>
+            <td>{{ api_key["name"] }}</td>
+            <td>{{ api_key["date_generated"] }}</td>
+            <td>
+              <input type="text" value='{{ api_key["key"] }}' onClick="this.select();" readonly dir="rtl">
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+  </div>
+{% else %}
+  <h2>No API keys exist</h2>
 {% endif %}
 </body>
 </html>
