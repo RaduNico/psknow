@@ -23,8 +23,9 @@
     vertical-align: middle;
   }
 
-      table {
+    table {
       border-collapse: collapse;
+      table-layout: auto;
       width: 100%;
       overflow: hidden;
     }
@@ -48,6 +49,14 @@
 
     tr:hover td {
       background-color: #459c48;
+    }
+
+    input {
+      text-overflow: ellipsis;
+    }
+
+    table.autosize {
+      width: auto;
     }
 
   </style>
@@ -112,20 +121,24 @@
 
   {% if api_keys|length > 0 %}
       <h2>API Keys:</h2>
-      <table>
-          <tr>
-              <th>Key name</th>
-              <th>Date Generated</th>
-              <th>API Key</th>
-          </tr>
-          {% for api_key in api_keys %}
-          <tr>
-              <td>{{ api_key["name"] }}</td>
-              <td>{{ api_key["date_generated"] }}</td>
-              <td>{{ api_key["key"] }}</td>
-          </tr>
-          {% endfor %}
-      </table>
+      <div>
+        <table class="autosize">
+            <tr>
+                <th>Key name</th>
+                <th>Date Generated</th>
+                <th>API Key</th>
+            </tr>
+            {% for api_key in api_keys %}
+            <tr>
+                <td>{{ api_key["name"] }}</td>
+                <td>{{ api_key["date_generated"] }}</td>
+                <td>
+                  <input type="text" value='{{ api_key["key"] }}' onClick="this.select();" readonly dir="rtl">
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+      </div>
   {% else %}
       <h2>No API keys exist</h2>
   {% endif %}
