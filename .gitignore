@@ -3,7 +3,6 @@ cracker/dict/top_10-100mil_hibp.txt
 cracker/dict/top_10mil_hibp.txt
 
 cracker/crack/hashcat.pot
-cracker/__pycache__
 cracker/handshakes/*
 !cracker/handshakes/.gitkeep
 cracker/logs/*
@@ -23,13 +22,14 @@ backend/static/wordlist-top4800-probable.txt
 
 backend/secret_key
 backend/backendvenv
-backend/__pycache__
 backend/logs/*
 !backend/logs/.gitkeep
 backend/handshakes/*
 !backend/handshakes/.gitkeep
 
 helpers/sources/*
+
+*__pycache__
 
 */.idea/
 .idea/

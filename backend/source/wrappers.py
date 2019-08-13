@@ -1,8 +1,27 @@
-from config import Configuration
+import sys
+import inspect
+
+from .config import Configuration
 
 from functools import wraps
 from flask_login import current_user
 from flask import flash, redirect
+
+
+def check_db_conn():
+    try:
+        info = Configuration.check_db_conn()
+    except Exception as e:
+        Configuration.logger.critical("Database is down with reason %s!" % e)
+        return None
+    return info
+
+
+def die(condition, message):
+    if condition:
+        Configuration.logger.critical("line %s in function %s, error %s" %
+                                      (inspect.currentframe().f_back.f_lineno, inspect.stack()[1][3], message))
+        sys.exit(-1)
 
 
 def is_admin(user):

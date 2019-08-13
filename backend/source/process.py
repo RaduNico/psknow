@@ -7,7 +7,7 @@ import os
 import sys
 
 from subprocess import Popen, PIPE
-from config import Configuration
+from .config import Configuration
 
 
 class Process:

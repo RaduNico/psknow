@@ -11,13 +11,13 @@ from secrets import token_urlsafe
 
 class Configuration(object):
     # Database Variables
-    database_location = '192.168.14.3:27017'
+    database_location = '127.0.0.1:27017'
     admin_account = "pandora"
     database_name = "psknow"
 
     # TODO move this in a private file
     db_username = 'psknow'
-    db_password = 'Grtel5fmwvKcrxwoXWSTSEAcKRpeCAcgjG9Ty2A9'
+    db_password = 'xY6R0YPFBpjebMwFHBYXQTokZ25nI1G8eZfjWqQrUtUeajcucgKpNxncVBCW'
 
     conn = None
     db = None

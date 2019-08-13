@@ -2,7 +2,7 @@ import bcrypt
 import base64
 import hashlib
 
-from config import Configuration
+from .config import Configuration
 
 from flask_login import UserMixin
 from copy import deepcopy

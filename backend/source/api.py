@@ -3,8 +3,8 @@
 import jwt
 import datetime
 
-from config import Configuration
-from wrappers import is_admin, requires_admin, not_admin
+from .config import Configuration
+from .wrappers import is_admin, requires_admin, not_admin
 
 from copy import deepcopy
 from flask import render_template, request, redirect, flash, url_for, Blueprint, send_from_directory
