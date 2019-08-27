@@ -7,6 +7,7 @@ import random
 from .process import Process
 from .config import Configuration
 from .wrappers import die, not_admin, check_db_conn
+from .database_helper import add_user_to_entry_id, generic_find
 
 from werkzeug.utils import secure_filename
 from flask import flash, redirect, Blueprint, request, render_template
@@ -79,28 +80,93 @@ def get_hccapx_file(attack_type, filepath):
     return temp_filename
 
 
-def duplicate_lookup(mac, ssid):
+# Return True if error occured or False otherwise
+def retire_handshake(internal_id):
     try:
-        duplicates = Configuration.wifis.find({"handshakes.SSID": ssid, "handshakes.MAC": mac})
-        Configuration.logger.info("Duplication lookup for '%s-%s'" % (ssid, mac))
+        document = Configuration.wifis.find_one({"id": internal_id})
+        Configuration.logger.info("Lookup for id '%s'" % internal_id)
     except Exception as e:
         Configuration.logger.error(
-            "Database error at retrieving duplication for '%s-%s' %s" % (ssid, mac, e))
+            "Database error at retrieving document with internal id '%s': %s" % (internal_id, e))
         flash("Server error at duplication data.")
+        return True
+
+    del document["_id"]
+    document["retired_on"] = datetime.datetime.now()
+
+    try:
+        result = Configuration.retired.insert_one(document)
+        Configuration.logger.info("Retired document with id '%s'. New _id: %s" %
+                                  (internal_id, result.inserted_id))
+    except Exception as e:
+        Configuration.logger.error(
+            "Database error at inserting document '%s': %s" % (document, e))
+        flash("Server error at duplication data.")
+        return True
+
+    try:
+        Configuration.wifis.delete_one({"id": internal_id})
+        Configuration.logger.info("Delete retired document with internal id '%s'" % internal_id)
+    except Exception as e:
+        Configuration.logger.error(
+            "Database error at deleting document with internal id '%s': %s" % (internal_id, e))
+        flash("Server error at duplication data.")
+        return True
+
+    return False
+
+
+def treat_duplicate(wifi_entry):
+    ssid = wifi_entry["handshake"]["SSID"]
+    mac = wifi_entry["handshake"]["MAC"]
+    user = wifi_entry["users"][0]
+    hs_type = wifi_entry["handshake"]["handshake_type"]
+    duplicate_exists = False
+
+    duplicates, error = generic_find(Configuration.wifis, {"handshakes.SSID": ssid, "handshakes.MAC": mac})
+
+    if error:
         return None, True
 
-    # TODO allow PMKID if only a handshake exists
-    if len(list(duplicates)) > 0:
-        flash("A PMKID/handshake for pair MAC-SSID: '%s-%s' already exists!" % (mac, ssid), category='warning')
-        return True, False
+    duplicates = list(duplicates)
 
-    return False, False
+    # There are multiple entries with the same SSID-MAC pair
+    if len(duplicates) > 1:
+        Configuration.logger.warning("Multiple entries with SSID-MAC '%s-%s' exist. Will not attempt PMKID substitution"
+                                     % (ssid, mac))
+        duplicate_exists = True
+
+        # Attempt to add the current user to the users list for that entry, if it's not already there
+        for duplicate in duplicates:
+            if user not in duplicate["users"]:
+                add_user_to_entry_id(user, duplicate["id"])
+
+    elif len(duplicates) == 1:
+        duplicate_exists = True
+        duplicate = duplicates[0]
+
+        # If only one other entry exists, it is a WPA type and the duplicate is a PMKID substitute it
+        if duplicate["handshake"]["handshake_type"] == "WPA" and hs_type == "PMKID":
+            if retire_handshake(duplicate["id"]):
+                return duplicates, True
+            flash("A WPA handshake was found for SSID-MAC '%s-%s'. Replacing with provided PMKID" % (ssid, mac),
+                  category='success')
+            duplicate_exists = False
+
+        # Attempt to add the current user to the users list for that entry, if it's not already there
+        elif user not in duplicate["users"]:
+            if add_user_to_entry_id(user, duplicate["id"]):
+                return None, True
+
+    if duplicate_exists:
+        flash("A PMKID/handshake for pair MAC-SSID: '%s-%s' already exists!" % (mac, ssid), category='warning')
+
+    return duplicate_exists, False
 
 
 # TODO change this to proper file type check - use file or directly detect magic numbers
-def check_handshake(file_path, filename):
-    entry_values = dict()
-    entry_values["handshakes"] = []
+def check_handshake(file_path, filename, wifi_entry):
+    entries = []
 
     duplicate_pair = set()
     duplicate_flag = False
@@ -108,7 +174,7 @@ def check_handshake(file_path, filename):
     # We add: file_type, handshake[SSID, MAC, open, handshake_type]
     # We will add later: handshake[crack_level, password, date_cracked]
     if filename.endswith(".16800"):
-        entry_values["file_type"] = "16800"
+        wifi_entry["file_type"] = "16800"
 
         with open(file_path, "r") as file_handler:
             lines = file_handler.readlines()
@@ -117,6 +183,7 @@ def check_handshake(file_path, filename):
             flash("Error! File '%s' is empty!" % filename)
             return False, None
 
+        # Rewrite file to delete any malformed lines
         with open(file_path, "w") as file_handler:
             for line in lines:
                 matchobj = Configuration.pmkid_regex.match(line)
@@ -129,18 +196,33 @@ def check_handshake(file_path, filename):
                 handshake["SSID"] = bytearray.fromhex(matchobj.group(2)).decode()
                 handshake["handshake_type"] = "PMKID"
 
-                is_duplicate, error = duplicate_lookup(handshake["MAC"], handshake["SSID"])
+                # Check for duplications inside the same file and silently drop them
+                if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
+                    continue
+
+                tmp_wifi = deepcopy(wifi_entry)
+
+                # Generate unique ID for our document
+                tmp_wifi["id"] = get_unique_id()
+
+                tmp_wifi["handshake"] = handshake
+
+                is_duplicate, error = treat_duplicate(tmp_wifi)
                 if error:
                     return False, None
+
                 if is_duplicate:
                     duplicate_flag = True
                     continue
 
-                entry_values["handshakes"].append(handshake)
+                # Check next PMKIDs in this file against this list of pairs to avoid duplicates in the same file
+                duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
+
+                entries.append(tmp_wifi)
 
     if filename.endswith((".cap", ".pcap", ".pcapng")):
         # We count how many already cracked files we got
-        entry_values["file_type"] = filename[filename.rfind('.') + 1:]
+        wifi_entry["file_type"] = filename[filename.rfind('.') + 1:]
         hs_types = ["PMKID", "WPA"]
 
         # Try for both PMKID and WPA
@@ -158,6 +240,8 @@ def check_handshake(file_path, filename):
             to_crack = list(filter(None, Process(show_command, crit=True).stdout().split('\n')))
 
             for cracked_target in to_crack:
+                # new_entry["handshakes"] = extra_info["handshakes"]
+
                 cracker_obj = Configuration.hashcat_left_regex.match(cracked_target)
 
                 if cracker_obj is None:
@@ -168,8 +252,8 @@ def check_handshake(file_path, filename):
 
                 # Remove duplicate entries in the same file - filter by MAC
                 flag = False
-                for hs in entry_values["handshakes"]:
-                    if hs["MAC"] == mac:
+                for hs in entries:
+                    if hs["handshake"]["MAC"] == mac:
                         flag = True
                         break
                 if flag:
@@ -189,7 +273,15 @@ def check_handshake(file_path, filename):
                 if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
                     continue
 
-                is_duplicate, error = duplicate_lookup(handshake["MAC"], handshake["SSID"])
+                tmp_wifi = deepcopy(wifi_entry)
+
+                # Generate unique ID for our document
+                tmp_wifi["id"] = get_unique_id()
+
+                tmp_wifi["handshake"] = handshake
+
+                is_duplicate, error = treat_duplicate(tmp_wifi)
+
                 if error:
                     return False, None
                 if is_duplicate:
@@ -197,18 +289,16 @@ def check_handshake(file_path, filename):
                     duplicate_flag = True
                     continue
 
-                entry_values["handshakes"].append(handshake)
+                entries.append(tmp_wifi)
 
             os.remove(temp_filename)
 
-    if len(entry_values["handshakes"]) == 0:
+    if len(entries) == 0:
         if not duplicate_flag:
             flash("Error! File '%s' does not contain a valid handshake" % filename)
-            return False, None, False
+        return False, None
 
-        return False, None, True
-
-    return True, entry_values, False
+    return True, entries
 
 
 @upload_api.route('/upload/', methods=['GET', 'POST'])
@@ -218,86 +308,83 @@ def upload_file():
     if request.method == 'GET':
         return render_template('upload.html')
 
-    if request.method == 'POST':
-        # Check if database is not down
-        if check_db_conn() is None:
-            flash("Error 500. Service unavailable!")
-            return render_template('upload.html')
+    # Check if database is not down
+    if check_db_conn() is None:
+        flash("Error 500. Service unavailable!")
+        return render_template('upload.html')
 
-        # Check existence of file field
-        if 'file' not in request.files:
-            Configuration.logger.info("No file uploaded.")
-            flash("No file uploaded.")
-            return redirect(request.url)
-
-        files = request.files.getlist('file')
-        Configuration.logger.info(files)
-        # Check for empty filename
-        if len(files) == 0:
-            Configuration.logger.info("No selected file.")
-            flash("No selected file.")
-            return redirect(request.url)
-
-        for file in files:
-            # Check for valid extension
-            filename = file.filename
-            if not valid_filename(filename):
-                Configuration.logger.info("Invalid file type %s uploaded" % filename[filename.rfind('.'):])
-                flash("Invalid file type %s uploaded" % filename[filename.rfind('.'):])
-                continue
-
-            # Create tmpfile with unique name
-            _, tmp_path = tempfile.mkstemp()
-            file.save(tmp_path)
-
-            # Validate handshake and get file type and handshake type
-            valid_handshake, extra_info, duplicate_flag = check_handshake(tmp_path, file.filename)
-
-            if duplicate_flag:
-                continue
-
-            if not valid_handshake:
-                Configuration.logger.info("No valid handshake found in file '%s'" % filename)
-                flash("No valid handshake found in file '%s'" % filename)
-                continue
-
-            # Generate unique ID for our document
-            rando = get_unique_id()
-
-            # Generate a unique filename to permanently save file
-            new_filename, file_path = get_unique_filename_path(file.filename)
-
-            new_entry = deepcopy(Configuration.default_wifi)
-
-            new_entry["id"] = rando
-            new_entry["date_added"] = datetime.datetime.now()
-
-            # new_entry["location"]["keyword"] = #TODO POST keyword
-            # new_entry["location"]["coordinates"] = #TODO POST coordinates
-
-            new_entry["path"] = new_filename
-            new_entry["handshakes"] = extra_info["handshakes"]
-            new_entry["file_type"] = extra_info["file_type"]
-            new_entry["user"] = current_user.get_id()
-            new_entry["priority"] = 0
-
-            # Save received file
-            try:
-                os.rename(tmp_path, file_path)
-                Configuration.logger.info("Saved file with id %s at %s" % (rando, file_path))
-            except Exception as e:
-                Configuration.logger.error("Exception at saving received file at path = %s : %s" % (file_path, e))
-                flash("Error saving file '%s'" % filename)
-                return redirect(request.url)
-
-            # Insert document in database with all information
-            try:
-                obj = Configuration.wifis.insert_one(new_entry)
-                Configuration.logger.info("Inserted object _id = %s with id = %s" % (obj.inserted_id, rando))
-            except Exception as e:
-                Configuration.logger.error("Exception at inserting file = %s: %s" % (file_path, e))
-                flash("Database error at saving filename %s" % filename)
-                return redirect(request.url)
-
-            flash("File '%s' uploaded successfully!" % filename, category='success')
+    # Check existence of file field
+    if 'file' not in request.files:
+        Configuration.logger.info("No file uploaded.")
+        flash("No file uploaded.")
         return redirect(request.url)
+
+    files = request.files.getlist('file')
+    Configuration.logger.info(files)
+    # Check for empty filename
+    if len(files) == 0:
+        Configuration.logger.info("No selected file.")
+        flash("No selected file.")
+        return redirect(request.url)
+
+    for file in files:
+        # Check for valid extension
+        filename = file.filename
+        if not valid_filename(filename):
+            Configuration.logger.info("Invalid file type %s uploaded" % filename[filename.rfind('.'):])
+            flash("Invalid file type %s uploaded" % filename[filename.rfind('.'):])
+            continue
+
+        # Create tmpfile with unique name
+        _, tmp_path = tempfile.mkstemp()
+        file.save(tmp_path)
+
+        # Generate a unique filename to permanently save file
+        new_filename, file_path = get_unique_filename_path(file.filename)
+
+        new_entry = deepcopy(Configuration.default_wifi)
+
+        new_entry["date_added"] = datetime.datetime.now()
+
+        # new_entry["location"]["keyword"] = #TODO POST keyword
+        # new_entry["location"]["coordinates"] = #TODO POST coordinates
+
+        new_entry["path"] = new_filename
+        new_entry["users"] = list(current_user.get_id())
+        new_entry["priority"] = 0
+
+        # Validate handshake and get file type and handshake type
+        valid_handshake, wifi_entries = check_handshake(tmp_path, file.filename, new_entry)
+
+        if not valid_handshake:
+            Configuration.logger.info("No valid handshake found in file '%s'" % filename)
+            flash("No valid handshake found in file '%s'" % filename)
+            continue
+
+        # Save received file
+        try:
+            os.rename(tmp_path, file_path)
+            Configuration.logger.info("Saved file at %s" % file_path)
+        except Exception as e:
+            Configuration.logger.error("Exception at saving received file at path = %s : %s" % (file_path, e))
+            flash("Error saving file '%s'" % filename)
+            return redirect(request.url)
+
+        # Insert document in database with all information
+        try:
+            objs = Configuration.wifis.insert_many(wifi_entries)
+            if len(objs.inserted_ids) != len(wifi_entries):
+                flash("Database error at saving filename %s" % filename)
+                Configuration.logger.error("Inserted object number (%d) does not match intended (%d)!"
+                                           "Inserted ids - '%s', intended wifis - '%s'" %
+                                           (len(objs.inserted_ids), len(wifi_entries), objs.inserted_ids, wifi_entries))
+            for idx, obj in enumerate(objs.inserted_ids):
+                Configuration.logger.info("Inserted object _id = %s with id = %s" %
+                                          (obj.inserted_id, wifi_entries[idx]))
+        except Exception as e:
+            Configuration.logger.error("Exception at inserting file = %s: %s" % (file_path, e))
+            flash("Database error at saving filename %s" % filename)
+            return redirect(request.url)
+
+        flash("File '%s' uploaded successfully!" % filename, category='success')
+    return redirect(request.url)

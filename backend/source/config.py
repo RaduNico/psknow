@@ -25,6 +25,7 @@ class Configuration(object):
     users = None
     admin = None
     rules = None
+    retired = None
 
     admin_table_name = "MainControlTable"
     default_admin_table = {"id": "MainControlTable", "workload": 2, "force": False}
@@ -39,7 +40,7 @@ class Configuration(object):
                                  "keyword": ""},
 
                     "path": None,
-                    "handshakes": [],  # contans multiple handshakes
+                    "handshake": None,
                     "file_type": "",
 
                     "user": None,
@@ -194,6 +195,7 @@ class Configuration(object):
             Configuration.users = Configuration.db["users"]
             Configuration.admin = Configuration.db["admin"]
             Configuration.rules = Configuration.db["rules"]
+            Configuration.retired = Configuration.db["retired"]
             Configuration.check_db_conn()
         except Exception as e:
             Configuration.logger.critical("Could not establish initial connection with error %s" % e)

@@ -98,7 +98,9 @@ def home():
             return render_template('admin_home.html')
 
         for file_structure in all_files:
-            crt_user = file_structure["user"]
+            # First user is the original uploader
+            crt_user = file_structure["users"][0]
+
             if crt_user not in user_handshakes:
                 user_handshakes[crt_user] = [[], []]
 
@@ -126,7 +128,7 @@ def home():
     cracked = []
     if logged_in:
         # Sort in mongo by the time the handshake was added
-        for file_structure in Configuration.wifis.find({"user": current_user.get_id()}).sort([("date_added", 1)]):
+        for file_structure in Configuration.wifis.find({"users": current_user.get_id()}).sort([("date_added", 1)]):
             # Sort in python by the SSID
             for handshake in sorted(file_structure["handshakes"], key=lambda k: k['SSID']):
                 if handshake["password"] == "":
