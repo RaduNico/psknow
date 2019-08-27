@@ -43,7 +43,7 @@ class Configuration(object):
                     "handshake": None,
                     "file_type": "",
 
-                    "user": None,
+                    "users": [],
                     "priority": 0,
                     "details": ""}
 

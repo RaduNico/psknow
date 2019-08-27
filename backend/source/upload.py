@@ -123,7 +123,7 @@ def treat_duplicate(wifi_entry):
     hs_type = wifi_entry["handshake"]["handshake_type"]
     duplicate_exists = False
 
-    duplicates, error = generic_find(Configuration.wifis, {"handshakes.SSID": ssid, "handshakes.MAC": mac})
+    duplicates, error = generic_find(Configuration.wifis, {"handshake.SSID": ssid, "handshake.MAC": mac})
 
     if error:
         return None, True
@@ -240,8 +240,6 @@ def check_handshake(file_path, filename, wifi_entry):
             to_crack = list(filter(None, Process(show_command, crit=True).stdout().split('\n')))
 
             for cracked_target in to_crack:
-                # new_entry["handshakes"] = extra_info["handshakes"]
-
                 cracker_obj = Configuration.hashcat_left_regex.match(cracked_target)
 
                 if cracker_obj is None:

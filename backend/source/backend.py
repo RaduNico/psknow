@@ -104,11 +104,11 @@ def home():
             if crt_user not in user_handshakes:
                 user_handshakes[crt_user] = [[], []]
 
-            for handshake in sorted(file_structure["handshakes"], key=lambda k: k['SSID']):
-                if handshake["password"] == "":
-                    user_handshakes[crt_user][0].append(get_uncracked_tuple(handshake, file_structure))
-                else:
-                    user_handshakes[crt_user][1].append(get_cracked_tuple(handshake, file_structure))
+            handshake = file_structure["handshake"]
+            if handshake["password"] == "":
+                user_handshakes[crt_user][0].append(get_uncracked_tuple(handshake, file_structure))
+            else:
+                user_handshakes[crt_user][1].append(get_cracked_tuple(handshake, file_structure))
 
         # Sort based on crack date and remove trailing raw date
         for entry in user_handshakes.values():
@@ -130,11 +130,11 @@ def home():
         # Sort in mongo by the time the handshake was added
         for file_structure in Configuration.wifis.find({"users": current_user.get_id()}).sort([("date_added", 1)]):
             # Sort in python by the SSID
-            for handshake in sorted(file_structure["handshakes"], key=lambda k: k['SSID']):
-                if handshake["password"] == "":
-                    uncracked.append(get_uncracked_tuple(handshake, file_structure))
-                else:
-                    cracked.append(get_cracked_tuple(handshake, file_structure))
+            handshake = file_structure["handshake"]
+            if handshake["password"] == "":
+                uncracked.append(get_uncracked_tuple(handshake, file_structure))
+            else:
+                cracked.append(get_cracked_tuple(handshake, file_structure))
 
     # Sort based on crack date and remove trailing raw date
     cracked = sorted(cracked, key=lambda k: k[7])
