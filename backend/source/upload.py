@@ -116,12 +116,14 @@ def retire_handshake(internal_id):
     return False
 
 
+# TODO if appending WPA/PMKID from another user use the current upload time
 def treat_duplicate(wifi_entry):
     ssid = wifi_entry["handshake"]["SSID"]
     mac = wifi_entry["handshake"]["MAC"]
     user = wifi_entry["users"][0]
     hs_type = wifi_entry["handshake"]["handshake_type"]
-    duplicate_exists = False
+    duplicate_flag = False
+    added_flag = False
 
     duplicates, error = generic_find(Configuration.wifis, {"handshake.SSID": ssid, "handshake.MAC": mac})
 
@@ -130,38 +132,77 @@ def treat_duplicate(wifi_entry):
 
     duplicates = list(duplicates)
 
+    Configuration.logger.warning("GOT HERE %s" % duplicates)
+
     # There are multiple entries with the same SSID-MAC pair
     if len(duplicates) > 1:
         Configuration.logger.warning("Multiple entries with SSID-MAC '%s-%s' exist. Will not attempt PMKID substitution"
                                      % (ssid, mac))
-        duplicate_exists = True
+        duplicate_flag = True
 
         # Attempt to add the current user to the users list for that entry, if it's not already there
         for duplicate in duplicates:
             if user not in duplicate["users"]:
                 add_user_to_entry_id(user, duplicate["id"])
+                added_flag = True
 
     elif len(duplicates) == 1:
-        duplicate_exists = True
+        duplicate_flag = True
         duplicate = duplicates[0]
 
         # If only one other entry exists, it is a WPA type and the duplicate is a PMKID substitute it
         if duplicate["handshake"]["handshake_type"] == "WPA" and hs_type == "PMKID":
+            if duplicate["handshake"]["active"]:
+                # TODO this should be fixed automatically in the back and not bother the user
+                flash("A PMKID was found inside the file '%s' for SSID-MAC '%s-%s', which could replace an existing "
+                      "WPA handshake, however that handshake is currently being attacked and could not be retired."
+                      "Try again later!" % (wifi_entry["path"], ssid, mac))
+                if user not in duplicate["users"]:
+                    if not add_user_to_entry_id(user, duplicate["id"]):
+                        flash("Attached existing WPA for SSID-MAC '%s-%s' to your account" % (ssid, mac),
+                              category="success")
+                return duplicates, True
+
             if retire_handshake(duplicate["id"]):
                 return duplicates, True
+
+            # Modify new entry so it matches data from old handshake
+            wifi_entry["handshake"]["crack_level"] = duplicate["handshake"]["crack_level"]
+            wifi_entry["handshake"]["date_cracked"] = duplicate["handshake"]["date_cracked"]
+            wifi_entry["handshake"]["password"] = duplicate["handshake"]["password"]
+
+            wifi_entry["date_added"] = duplicate["date_added"]
+            wifi_entry["location"] = deepcopy(duplicate["location"])
+            wifi_entry["priority"] = duplicate["priority"]
+
+            wifi_entry["users"] = duplicate["users"]
+            if user not in duplicate["users"]:
+                wifi_entry["users"].append(user)
+
             flash("A WPA handshake was found for SSID-MAC '%s-%s'. Replacing with provided PMKID" % (ssid, mac),
                   category='success')
-            duplicate_exists = False
+            duplicate_flag = False
 
         # Attempt to add the current user to the users list for that entry, if it's not already there
         elif user not in duplicate["users"]:
             if add_user_to_entry_id(user, duplicate["id"]):
                 return None, True
+            else:
+                Configuration.logger.info("Successfully added user %s in handshake '%s-%s'" % (user, ssid, mac))
+                added_flag = True
 
-    if duplicate_exists:
-        flash("A PMKID/handshake for pair MAC-SSID: '%s-%s' already exists!" % (mac, ssid), category='warning')
+    if duplicate_flag:
+        message = "A PMKID/WPA for pair MAC-SSID: '%s-%s' already exists!" % (mac, ssid)
+        category = "warning"
 
-    return duplicate_exists, False
+        # Change the message if the duplicate was attached to the current user accout
+        if added_flag:
+            message += " Attached existing PMKID/WPA to your account."
+            category = "success"
+
+        flash(message, category=category)
+
+    return duplicate_flag, False
 
 
 # TODO change this to proper file type check - use file or directly detect magic numbers
@@ -265,6 +306,9 @@ def check_handshake(file_path, filename, wifi_entry):
                         handshake["SSID"] = handshake["SSID"][5:-1].decode("hex")
                 else:
                     handshake["SSID"] = cracker_obj.group(2)
+
+                Configuration.logger.warning("Doing %s" % handshake["SSID"])
+
                 handshake["handshake_type"] = hs_type
 
                 # Avoid duplicate 'duplicate message' for files with both PMKID and handshakes
@@ -293,7 +337,8 @@ def check_handshake(file_path, filename, wifi_entry):
 
     if len(entries) == 0:
         if not duplicate_flag:
-            flash("Error! File '%s' does not contain a valid handshake" % filename)
+            Configuration.logger.info("No valid handshake found in file '%s'" % filename)
+            flash("No valid handshake found in file '%s'" % filename)
         return False, None
 
     return True, entries
@@ -348,15 +393,13 @@ def upload_file():
         # new_entry["location"]["coordinates"] = #TODO POST coordinates
 
         new_entry["path"] = new_filename
-        new_entry["users"] = list(current_user.get_id())
+        new_entry["users"] = [current_user.get_id()]
         new_entry["priority"] = 0
 
         # Validate handshake and get file type and handshake type
         valid_handshake, wifi_entries = check_handshake(tmp_path, file.filename, new_entry)
 
         if not valid_handshake:
-            Configuration.logger.info("No valid handshake found in file '%s'" % filename)
-            flash("No valid handshake found in file '%s'" % filename)
             continue
 
         # Save received file
@@ -378,7 +421,7 @@ def upload_file():
                                            (len(objs.inserted_ids), len(wifi_entries), objs.inserted_ids, wifi_entries))
             for idx, obj in enumerate(objs.inserted_ids):
                 Configuration.logger.info("Inserted object _id = %s with id = %s" %
-                                          (obj.inserted_id, wifi_entries[idx]))
+                                          (obj, wifi_entries[idx]))
         except Exception as e:
             Configuration.logger.error("Exception at inserting file = %s: %s" % (file_path, e))
             flash("Database error at saving filename %s" % filename)

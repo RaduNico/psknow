@@ -2,6 +2,7 @@ import sys
 import re
 import logging
 import os
+import json
 
 from time import sleep
 from pymongo import MongoClient
@@ -91,6 +92,9 @@ class Configuration(object):
     # Secret keys
     api_secret_key = None
 
+    # Cracker side data
+    max_rules = 0
+
     @staticmethod
     def get_key_from_file(filename):
         try:
@@ -179,7 +183,16 @@ class Configuration(object):
 
     @staticmethod
     def get_next_rule(crt_rule):
+        if crt_rule >= Configuration.max_rules:
+            return None
+
         return next(Configuration.rules.find({"priority": {"$gt": crt_rule}}).sort([("priority", 1)]))
+
+    @staticmethod
+    def log_fatal(message):
+        Configuration.logger.critical(message)
+        sleep(10)
+        sys.exit(-1)
 
     @staticmethod
     def database_conection():
@@ -198,14 +211,41 @@ class Configuration(object):
             Configuration.retired = Configuration.db["retired"]
             Configuration.check_db_conn()
         except Exception as e:
-            Configuration.logger.critical("Could not establish initial connection with error %s" % e)
-            sleep(10)
-            sys.exit(-1)
+            Configuration.log_fatal("Could not establish initial connection with error %s" % e)
+
+    @staticmethod
+    def read_rules():
+        rules = []
+        try:
+            with open('rules') as json_data:
+                rules = json.load(json_data)
+        except Exception as e:
+            Configuration.log_fatal("Error trying to load rules data: %s" % e)
+
+        rule_names = set()
+
+        for rule in rules:
+            # Check for duplicate rules
+            if rule["name"] in rule_names:
+                Configuration.log_fatal("Duplicate rule %s" % rule["name"])
+            rule_names.add(rule["name"])
+
+            if rule["priority"] > Configuration.max_rules:
+                Configuration.max_rules = rule["priority"]
+
+        # if "rules" in Configuration.db.list_collection_names():
+        #     Configuration.db["rules"].drop()
+        #
+        # rules_db = Configuration.db["rules"]
+        # rules_db.insert_many(rules)
 
     @staticmethod
     def initialize():
         # Establish database connection
         Configuration.database_conection()
+
+        # Read rule data
+        Configuration.read_rules()
 
         # Check if handshake folder exists
         if not os.path.isdir(Configuration.save_file_location):

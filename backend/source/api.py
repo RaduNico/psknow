@@ -7,7 +7,7 @@ from .config import Configuration
 from .wrappers import is_admin, requires_admin, not_admin
 
 from copy import deepcopy
-from flask import render_template, request, redirect, flash, url_for, Blueprint, send_from_directory
+from flask import render_template, request, redirect, flash, url_for, Blueprint, send_from_directory, jsonify
 from functools import wraps
 from flask_login import login_required, current_user
 
@@ -52,22 +52,23 @@ def require_key(f):
         api_key = request.form.get("apikey", None)
 
         if api_key is None:
-            return {"success": False, "reason": "Api key missing!"}
+            return jsonify({"success": False, "reason": "Api key missing!"})
 
         try:
             decoded_api_key = jwt_decode(api_key, Configuration.api_secret_key)
-        except jwt.exceptions.InvalidSignatureError:
-            return {"success": False, "reason": "Invalid API key!"}
+        except (jwt.exceptions.InvalidSignatureError, jwt.exceptions.DecodeError):
+            return jsonify({"success": False, "reason": "Invalid API key!"})
 
         user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except. Check for none
 
         try:
             if api_key not in user_entry["api_keys"] or user_entry["allow_api"] is not True:
-                return {"success": False, "reason": "Forbidden, invalid or expired API key!"}
+                return jsonify({"success": False, "reason": "Forbidden, invalid or expired API key!"})
         except KeyError:
             Configuration.logger.warning("User entry does not contain 'api_keys' or 'allow_api' key: %s" % user_entry)
 
         kwargs["user_entry"] = user_entry
+
         return f(*args, **kwargs)
     return require_key_decorator
 
@@ -119,7 +120,7 @@ def send_autoupload():
 @login_required
 @not_admin
 @allowed_api
-def generate_key(_, **kwargs):
+def generate_key(**kwargs):
     api_key = deepcopy(key_template)
 
     try:
@@ -154,29 +155,29 @@ def generate_key(_, **kwargs):
 
 @api_api.route('/api/v1/getwork', methods=['POST'])
 @require_key
-def getwork_v1(_, **kwargs):
-    return {"success": True}
+def getwork_v1(**kwargs):
+    return jsonify({"success": True})
 
 
 @api_api.route('/api/v1/pausework', methods=['POST'])
 @require_key
-def pausework_v1(_, **kwargs):
-    return {"success": True}
+def pausework_v1(**kwargs):
+    return jsonify({"success": True})
 
 
 @api_api.route('/api/v1/stopwork', methods=['POST'])
 @require_key
-def stopwork_v1(_, **kwargs):
-    return {"success": True}
+def stopwork_v1(**kwargs):
+    return jsonify({"success": True})
 
 
 @api_api.route('/api/v1/sendeta', methods=['POST'])
 @require_key
-def sendeta_v1(_, **kwargs):
-    return {"success": True}
+def sendeta_v1(**kwargs):
+    return jsonify({"success": True})
 
 
 @api_api.route('/api/v1/sendresult', methods=['POST'])
 @require_key
-def sendresult_v1(_, **kwargs):
-    return {"success": True}
+def sendresult_v1(**kwargs):
+    return jsonify({"success": True})

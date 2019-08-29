@@ -24,7 +24,7 @@ def generic_find(col, query, api_query=False):
 
     try:
         values = col.find(query)
-        Configuration.logger.info("db.%s: Error for query:'%s'" % (col.name, query))
+        Configuration.logger.info("db.%s: Successfully ran query '%s'" % (col.name, query))
     except Exception as e:
         Configuration.logger.error("db.%s: Database error at running find query '%s': %s" % (col.name, query, e))
         err = True

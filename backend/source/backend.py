@@ -31,8 +31,11 @@ def get_uncracked_tuple(handshake, document):
     date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
     if handshake["active"]:
         next_rule = Configuration.get_next_rule(handshake["crack_level"])
-        crack_level = "%d -> %d" % \
-                      (handshake["crack_level"], next_rule["priority"])
+        if next_rule is None:
+            crack_level = "%d -> Error" % handshake["crack_level"]
+        else:
+            crack_level = "%d -> %d" % \
+                          (handshake["crack_level"], next_rule["priority"])
         eta = handshake["eta"]
     else:
         crack_level = handshake["crack_level"]
