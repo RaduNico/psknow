@@ -17,6 +17,23 @@ def add_user_to_entry_id(user, entry_id):
     return err
 
 
+# Returns True if error occured, False otherwise
+def update_hs_id(handshake_id, set_query):
+    error = False
+    try:
+        upd = Configuration.wifis.update({"id": handshake_id}, {"$set": set_query})
+        if not upd["updatedExisting"]:
+            Configuration.logger.error("db.wifis: Failed to update document with id = '%s' with message '%s'" %
+                                       (handshake_id, upd))
+            error = True
+        Configuration.logger.info("db.wifis: Updated handshake id '%s', with $set data %s" % (handshake_id, set_query))
+    except Exception as e:
+        Configuration.logger.error("db.wifis: Failed to update document with id = '%s' with error '%s'" %
+                                   (handshake_id, e))
+        error = True
+    return error
+
+
 # Returns the result of the query and True if error occured, False otherwise
 def generic_find(col, query, api_query=False):
     values = None
@@ -32,3 +49,4 @@ def generic_find(col, query, api_query=False):
             flash("Server error at duplication data.")
 
     return values, err
+

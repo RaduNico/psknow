@@ -8,6 +8,7 @@ from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 from secrets import token_urlsafe
+from threading import Lock
 
 
 class Configuration(object):
@@ -94,6 +95,9 @@ class Configuration(object):
 
     # Cracker side data
     max_rules = 0
+    wifis_lock = Lock()
+
+    allowed_eta_regex = re.compile("^[a-zA-Z0-9,()]+$")
 
     @staticmethod
     def get_key_from_file(filename):
