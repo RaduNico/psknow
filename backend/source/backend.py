@@ -2,7 +2,7 @@ from werkzeug.exceptions import abort
 
 from .config import Configuration
 from .user import User
-from .wrappers import is_admin, requires_admin, not_admin, die, check_db_conn
+from .wrappers import is_admin, requires_admin, check_db_conn
 
 from flask import render_template, request, redirect, flash, url_for, Blueprint
 from flask_login import login_user, logout_user, login_required, current_user
