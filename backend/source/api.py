@@ -313,11 +313,6 @@ def is_password(password, db_entry):
         os.remove(temp_filename)
 
 
-# TODO delete this when making out of order rules
-def get_rule_from_name(name):
-    return Configuration.rules.find_one({"name": name})
-
-
 # Decorator that checks the validity of a API key sent
 def not_cracked(f):
     @wraps(f)
@@ -331,9 +326,8 @@ def not_cracked(f):
             kwargs["password"] = password
             return f(*args, **kwargs)
 
-        next_prio = get_rule_from_name(kwargs["job"]["reserved"]["tried_rule"])["priority"]
         updated = dict()
-        updated["handshake.crack_level"] = next_prio
+        updated["handshake.tried_dicts"].append(kwargs["job"]["reserved"]["tried_rule"])
         updated["handshake.active"] = False
         updated["reserved"] = None
 
@@ -362,7 +356,8 @@ def sendresult_v1(**kwargs):
     handshake = wifi_entry["handshake"]
     handshake["password"] = password
     handshake["date_cracked"] = datetime.datetime.now()
-    handshake["crack_level"] = get_rule_from_name(wifi_entry["reserved"]["tried_rule"])["priority"]
+    handshake["cracked_rule"] = wifi_entry["reserved"]["tried_rule"]
+    handshake["tried_dicts"].append(wifi_entry["reserved"]["tried_rule"])
     handshake["active"] = False
 
     Configuration.logger.info("Cracked handshake '%s' - '%s': '%s'" % (handshake["SSID"], handshake["MAC"], password))

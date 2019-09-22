@@ -26,7 +26,6 @@ class Configuration(object):
     wifis = None
     users = None
     admin = None
-    rules = None
     retired = None
 
     admin_table_name = "MainControlTable"
@@ -50,7 +49,8 @@ class Configuration(object):
                     "details": ""}
 
     default_handshake = {  # Metadata
-        "crack_level": -10,
+        "tried_dicts": [],
+        "cracked_rule": "",
         "active": False,
         "handshake_type": None,
 
@@ -95,7 +95,10 @@ class Configuration(object):
 
     # Cracker side data
     max_rules = 0
+    number_rules = 0
+    rule_priorities = {}
     wifis_lock = Lock()
+    rule_dict = {}
 
     allowed_eta_regex = re.compile("^[a-zA-Z0-9,()]+$")
 
@@ -183,14 +186,7 @@ class Configuration(object):
 
     @staticmethod
     def get_active_rules():
-        return Configuration.rules.find({}).sort([("priority", 1)])
-
-    @staticmethod
-    def get_next_rule(crt_rule):
-        if crt_rule >= Configuration.max_rules:
-            return None
-
-        return next(Configuration.rules.find({"priority": {"$gt": crt_rule}}).sort([("priority", 1)]))
+        return list(Configuration.rule_dict.values())
 
     @staticmethod
     def log_fatal(message):
@@ -220,28 +216,26 @@ class Configuration(object):
     @staticmethod
     def read_rules():
         rules = []
+
+        # TODO if you ever do this dinamically you need to make sure no work is being sent while rules are updating
         try:
             with open('rules') as json_data:
                 rules = json.load(json_data)
         except Exception as e:
             Configuration.log_fatal("Error trying to load rules data: %s" % e)
 
-        rule_names = set()
-
         for rule in rules:
             # Check for duplicate rules
-            if rule["name"] in rule_names:
+            if rule["name"] in Configuration.rule_dict:
                 Configuration.log_fatal("Duplicate rule %s" % rule["name"])
-            rule_names.add(rule["name"])
+
+            Configuration.rule_dict[rule["name"]] = rule
+            Configuration.rule_priorities[rule["name"]] = int(rule["priority"])
 
             if rule["priority"] > Configuration.max_rules:
                 Configuration.max_rules = rule["priority"]
 
-        # if "rules" in Configuration.db.list_collection_names():
-        #     Configuration.db["rules"].drop()
-        #
-        # rules_db = Configuration.db["rules"]
-        # rules_db.insert_many(rules)
+        Configuration.number_rules = len(Configuration.rule_dict)
 
     @staticmethod
     def initialize():

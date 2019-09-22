@@ -15,33 +15,28 @@ def get_cracked_tuple(handshake, document):
     mac = handshake["MAC"]
     hs_type = handshake["handshake_type"]
     date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
-    crack_level = handshake["crack_level"]
+    cracked_by = handshake["cracked_rule"]
 
     password = handshake["password"]
     date = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
     raw_date = handshake["date_cracked"]
 
-    return ssid, mac, hs_type, date_added, crack_level, password, date, raw_date
+    return ssid, mac, hs_type, date_added, cracked_by, password, date, raw_date
 
 
-def get_uncracked_tuple(handshake, document):
+def get_uncracked_tuple(handshake, document, reserved_data):
     ssid = handshake["SSID"]
     mac = handshake["MAC"]
     hs_type = handshake["handshake_type"]
     date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
     if handshake["active"]:
-        next_rule = Configuration.get_next_rule(handshake["crack_level"])
-        if next_rule is None:
-            crack_level = "%d -> Error" % handshake["crack_level"]
-        else:
-            crack_level = "%d -> %d" % \
-                          (handshake["crack_level"], next_rule["priority"])
+        tried_rules = "Trying rule %s" % reserved_data["tried_rule"]
         eta = handshake["eta"]
     else:
-        crack_level = handshake["crack_level"]
+        tried_rules = "%s/%s" % (len(handshake["tried_dicts"]), Configuration.number_rules)
         eta = ""
 
-    return ssid, mac, hs_type, date_added, crack_level, eta
+    return ssid, mac, hs_type, date_added, tried_rules, eta
 
 
 @blob_api.route('/admin/', methods=['GET', 'POST'])
@@ -109,7 +104,8 @@ def home():
 
             handshake = file_structure["handshake"]
             if handshake["password"] == "":
-                user_handshakes[crt_user][0].append(get_uncracked_tuple(handshake, file_structure))
+                user_handshakes[crt_user][0].append(get_uncracked_tuple(handshake, file_structure,
+                                                                        file_structure["reserved"]))
             else:
                 user_handshakes[crt_user][1].append(get_cracked_tuple(handshake, file_structure))
 
@@ -135,7 +131,7 @@ def home():
             # Sort in python by the SSID
             handshake = file_structure["handshake"]
             if handshake["password"] == "":
-                uncracked.append(get_uncracked_tuple(handshake, file_structure))
+                uncracked.append(get_uncracked_tuple(handshake, file_structure, file_structure["reserved"]))
             else:
                 cracked.append(get_cracked_tuple(handshake, file_structure))
 

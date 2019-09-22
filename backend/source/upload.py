@@ -167,7 +167,8 @@ def treat_duplicate(wifi_entry):
                 return duplicates, True
 
             # Modify new entry so it matches data from old handshake
-            wifi_entry["handshake"]["crack_level"] = duplicate["handshake"]["crack_level"]
+            wifi_entry["handshake"]["tried_dicts"] = duplicate["handshake"]["tried_dicts"]
+            wifi_entry["handshake"]["cracked_rule"] = duplicate["handshake"]["cracked_rule"]
             wifi_entry["handshake"]["date_cracked"] = duplicate["handshake"]["date_cracked"]
             wifi_entry["handshake"]["password"] = duplicate["handshake"]["password"]
 
@@ -213,7 +214,7 @@ def check_handshake(file_path, filename, wifi_entry):
     duplicate_flag = False
 
     # We add: file_type, handshake[SSID, MAC, open, handshake_type]
-    # We will add later: handshake[crack_level, password, date_cracked]
+    # We will add later: handshake[tried_dicts, password, date_cracked]
     if filename.endswith(".16800"):
         wifi_entry["file_type"] = "16800"
 

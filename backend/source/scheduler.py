@@ -5,12 +5,60 @@ from .process import Process
 from .database_helper import generic_find, update_hs_id
 from .config import Configuration
 
+from bson.code import Code
 from tempfile import mkstemp
 from base64 import b64encode
 from copy import deepcopy
 
 
 class Scheduler:
+    mapper_template = "function() {" \
+                      " var prios = %s;" \
+                      " var result_name = '';" \
+                      " var result_prio = 900000;" \
+                      " var crt = {};" \
+                      " for (var iter in this['handshake']['tried_dicts']) {" \
+                      " 	crt[this['handshake']['tried_dicts'][iter]] = 1;" \
+                      " }" \
+                      " for (var key in prios) {" \
+                      " 	if ( crt[key] !== 1 && prios[key] < result_prio) {" \
+                      " 		result_name = key;" \
+                      " 		result_prio = prios[key];" \
+                      " 	}" \
+                      " }" \
+                      " var result = {};" \
+                      " result['date_added'] = this['date_added'];" \
+                      " result['priority'] = this['priority'];" \
+                      " result['id'] = this['id'];" \
+                      " result['path'] = this['path'];" \
+                      " result['file_type'] = this['file_type'];" \
+                      " result['id'] = this['id'];" \
+                      " result['mac'] = this['handshake']['MAC'];" \
+                      " result['ssid'] = this['handshake']['SSID'];" \
+                      " result['next_rule'] = result_name;" \
+                      " result['handshake_type'] = this['handshake']['handshake_type'];" \
+                      " emit(result_prio, result)" \
+                      "}"
+
+    reducer = Code("function (rule_prio, documents) {"
+                   "	var good_document = documents[0];"
+                   "	var best_user_prio = documents[0]['priority'];"
+                   "	var best_date = documents[0]['date_added'];"
+                   "	for (var i = 1; i < documents.length; i++) {"
+                   "		if (documents[i]['priority'] < best_user_prio) {"
+                   "			best_user_prio = documents[i]['priority'];"
+                   "			"
+                   "			good_document = documents[i];"
+                   "			best_date = documents[i]['date_added'];"
+                   "		} else if (documents[i]['priority'] === "
+                   "best_user_prio && documents[i]['date_added'] < best_date) {"
+                   "			good_document = documents[i];"
+                   "			best_date = documents[i]['date_added'];"
+                   "		}"
+                   "	}"
+                   "	return good_document;"
+                   "}")
+
     default_task = {
         "handshake": {
             "data": "",
@@ -78,20 +126,20 @@ class Scheduler:
             return None
 
         if crt_capture["file_type"] == "16800":
-            return Scheduler._get_pmkid_mac(crt_capture["path"], crt_capture["handshake"]["MAC"])
+            return Scheduler._get_pmkid_mac(crt_capture["path"], crt_capture["mac"])
 
         _, temp_filename = mkstemp(prefix="psknow_backend")
 
-        if crt_capture["handshake"]["handshake_type"] == "PMKID":
+        if crt_capture["handshake_type"] == "PMKID":
             flag = "-z"
-        elif crt_capture["handshake"]["handshake_type"] == "WPA":
+        elif crt_capture["handshake_type"] == "WPA":
             flag = "-o"
         else:
             Configuration.logger.error("Unknown type of attack '%s' in entry '%s'" %
-                                       (crt_capture["handshake"]["handshake_type"], crt_capture))
+                                       (crt_capture["handshake_type"], crt_capture))
             return None
 
-        mac_addr = crt_capture["handshake"]["MAC"].replace(":", "")
+        mac_addr = crt_capture["mac"].replace(":", "")
 
         # Filter packets based on bssid so we attack only one wifi in a file with multiple captures
         hcx_cmd = "hcxpcaptool %s %s %s --filtermac=%s" %\
@@ -107,30 +155,46 @@ class Scheduler:
             return b64encode(fd.read()).decode("utf8")
 
     @staticmethod
-    def get_next_handshake(apikey):
-        error = ""
+    def _extract_rule_with_parameters(entries, parameters):
+        return {}
+
+    @staticmethod
+    def get_next_handshake(apikey, parameters=None):
         task = deepcopy(Scheduler.default_task)
 
-        query = {"handshake.crack_level": {"$lt": Configuration.max_rules, "$gt": -1},
-                 "handshake.open": False, "reserved_by": None, "handshake.password": ""}
+        query = {"handshake.open": False, "reserved_by": None, "handshake.password": "",
+                 "handshake.tried_dicts.%s" % (Configuration.number_rules - 1): {"$exists": False}}
 
+        # Lock this in order to ensure that multiple threads do not reserve the same handshake
         with Configuration.wifis_lock:
-            entry = next(Configuration.wifis.find(query).sort([("priority", 1), ("handshake.crack_level", 1),
-                                                               ("date_added", 1)]), None)
+            mapper = Code(Scheduler.mapper_template % Configuration.rule_priorities)
+            try:
+                response = Configuration.wifis.map_reduce(mapper, Scheduler.reducer, {"inline": 1}, query=query)
+            except Exception as e:
+                Configuration.logger.error("Error occured while doing the mapreduce: %s" % e)
+                return None, "Internal server error 101"
 
-            # min(lst, key=lambda val: a[val])
-            if entry is None:
+            lowest_prio = min(map(lambda val: val["value"]["priority"], response["results"]))
+            entries = [x["value"] for x in response["results"] if x["value"]["priority"] == lowest_prio]
+
+            Configuration.logger.fatal("lowest prio %s" % lowest_prio)
+
+            for res in entries:
+                Configuration.logger.critical(res)
+
+            if parameters is None:
+                lowest_prio = min(map(lambda val: Configuration.rule_priorities[val["next_rule"]], entries))
+                best_handshake = [val for val in entries
+                                  if Configuration.rule_priorities[val["next_rule"]] == lowest_prio][0]
+            else:
+                best_handshake = Scheduler._extract_rule_with_parameters(entries, parameters)
+
+            if best_handshake is None:
                 return task, "No work to be done at the moment."
 
-            query = {"priority": {"$gt": entry["handshake"]["crack_level"], "$lt": Configuration.max_rules}}
-            next_rule = next(Configuration.rules.find(query).sort([("priority", 1)]), None)
+            Scheduler._reserve_handshake(best_handshake["id"], apikey, best_handshake["next_rule"])
 
-            if next_rule is None:
-                Configuration.logger.error("Next rule was None in query '%s'" % query)
-                return task, "Internal server error 101"
-
-            Scheduler._reserve_handshake(entry["id"], apikey, next_rule["name"])
-
+        next_rule = Configuration.rule_dict[best_handshake["next_rule"]]
         task["rule"]["wordsize"] = next_rule["wordsize"]
         task["rule"]["type"] = next_rule["type"]
         task["rule"]["name"] = next_rule["name"]
@@ -143,15 +207,16 @@ class Scheduler:
 
         task["rule"]["aux_data"] = mapper[next_rule["type"]]
 
-        task["handshake"]["data"] = Scheduler._get_hccapx_data(entry)
-        task["handshake"]["ssid"] = entry["handshake"]["SSID"]
-        task["handshake"]["mac"] = entry["handshake"]["MAC"]
-        task["handshake"]["file_type"] = entry["file_type"]
-        task["handshake"]["handshake_type"] = entry["handshake"]["handshake_type"]
+        task["handshake"]["data"] = Scheduler._get_hccapx_data(best_handshake)
+        task["handshake"]["ssid"] = best_handshake["ssid"]
+        task["handshake"]["mac"] = best_handshake["mac"]
+        task["handshake"]["file_type"] = best_handshake["file_type"]
+        task["handshake"]["handshake_type"] = best_handshake["handshake_type"]
 
+        error = ""
         if task["handshake"]["data"] is None:
             error = "Error getting handshake data from file."
-            Scheduler.release_handshake(entry["id"])
+            Scheduler.release_handshake(best_handshake["id"])
 
         return task, error
 
