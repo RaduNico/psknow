@@ -1,0 +1,164 @@
+# Custom rules
+[List.Rules:Simple123]
+
+>6 $1
+>6 c $1
+>6 ^1
+>6 c ^1
+
+>5 Az"12"
+>5 Az"21"
+>5 c Az"12"
+>5 c Az"21"
+>5 A0"12"
+>5 A0"21"
+>5 c A0"12"
+>5 c A0"21"
+
+
+>4 Az"321"
+>4 Az"123"
+>4 c Az"123"
+>4 c Az"321"
+>4 A0"321"
+>4 A0"123"
+>4 c A0"321"
+>4 c A0"123"
+
+[List.Rules:SimpleYears]
+>3 Az"19[0-9][0-9]"
+>3 Az"20[0-9][0-9]"
+>3 c Az"19[0-9][0-9]"
+>3 c Az"20[0-9][0-9]"
+
+>3 A0"19[0-9][0-9]"
+>3 A0"20[0-9][0-9]"
+>3 c A0"19[0-9][0-9]"
+>3 c A0"20[0-9][0-9]"
+
+[List.Rules:SimpleNums]
+# We jump over the numbers contained in Simple123
+>6 $[02-9]
+>6 c $[02-9]
+>6 ^[02-9]
+>6 c ^[02-9]
+
+>5 Az"0[0-9]"
+>5 Az"1[0-13-9]"
+>5 Az"2[02-9]"
+>5 Az"[3-9][0-9]"
+>5 c Az"0[0-9]"
+>5 c Az"1[0-13-9]"
+>5 c Az"2[02-9]"
+>5 c Az"[3-9][0-9]"
+>5 A0"0[0-9]"
+>5 A0"1[0-13-9]"
+>5 A0"2[02-9]"
+>5 A0"[3-9][0-9]"
+>5 c A0"0[0-9]"
+>5 c A0"1[0-13-9]"
+>5 c A0"2[02-9]"
+>5 c A0"[3-9][0-9]"
+
+[List.Rules:SimpleSymbol]
+# Append symbol
+>6 $[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Capitalize and append symbol
+>6 c $[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Pre-pend symbol
+>6 ^[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Capitalize and pre-pend symbol
+>6 c ^[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+
+[List.Rules:SimpleSymbolNum]
+
+# Append digit and then symbol
+>5 $[0-9]$[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Append symbol and then digit
+>5 $[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]$[0-9]
+# Capitalize and append digit then symbol
+>5 c $[0-9]$[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Capitalize and append symbol then digit
+>5 c $[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]$[0-9]
+
+# Symbol - Digit - word
+>5 ^[0-9]^[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Digit - Symbol - word
+>5 ^[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]^[0-9]
+# Symbol - Digit - Word (CAPITAL)
+>5 c ^[0-9]^[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]
+# Digit - Symbol - Word (CAPITAL)
+>5 c ^[$%^&*()\-_+=|\\<>\[\]{}#@/~.,:;'?!`"]^[0-9]
+
+[List.Rules:SugeoRamona]
+# Muie, sugeo, suge-o, sugepula
+>3 A0"muie"
+>2 A0"sugeo"
+A0"suge-o"
+Az"sugepula"
+
+>3 A0"Muie"
+>2 A0"Sugeo"
+A0"Suge-o"
+Az"SugePula"
+Az"sugePula"
+Az"Sugepula"
+
+>3 c A0"Muie"
+>2 c A0"Sugeo"
+c A0"Suge-o"
+c Az"SugePula"
+c Az"sugePula"
+c Az"Sugepula"
+
+>3 A0"muie"$[ -@,[-`,{-~]
+>2 A0"sugeo"$[ -@,[-`,{-~]
+A0"suge-o"$[ -@,[-`,{-~]
+Az"sugepula"$[ -@,[-`,{-~]
+
+>3 A0"Muie"$[ -@,[-`,{-~]
+>2 A0"Sugeo"$[ -@,[-`,{-~]
+A0"Suge-o"$[ -@,[-`,{-~]
+Az"SugePula"$[ -@,[-`,{-~]
+Az"sugePula"$[ -@,[-`,{-~]
+Az"Sugepula"$[ -@,[-`,{-~]
+
+>3 c A0"Muie"$[ -@,[-`,{-~]
+>2 c A0"Sugeo"$[ -@,[-`,{-~]
+c A0"Suge-o"$[ -@,[-`,{-~]
+c Az"SugePula"$[ -@,[-`,{-~]
+c Az"sugePula"$[ -@,[-`,{-~]
+c Az"Sugepula"$[ -@,[-`,{-~]
+
+>3 A0"muie"Az"123"
+>2 A0"sugeo"Az"123"
+A0"suge-o"Az"123"
+Az"sugepula123"
+
+>3 A0"Muie"Az"123"
+>2 A0"Sugeo"Az"123"
+A0"Suge-o"Az"123"
+Az"Sugepula123"
+Az"SugePula123"
+Az"sugePula123"
+
+>3 c A0"Muie"Az"123"
+>2 c A0"Sugeo"Az"123"
+c A0"Suge-o"Az"123"
+c Az"Sugepula123"
+c Az"SugePula123"
+c Az"sugePula123"
+
+# PUIE MONTA
+
+>3 A1"uiem"
+>3 c A1"uieM"
+>3 c A1"uiem"
+
+>2 A1"uiem"$[ -@,[-`,{-~]
+>2 c A1"uieM"$[ -@,[-`,{-~]
+>2 c A1"uiem"$[ -@,[-`,{-~]
+
+A1"uiem"Az"123"
+c A1"uieM"Az"123"
+c A1"uiem"Az"123"

@@ -62,7 +62,7 @@
         "wordsize": 1289424,
         "desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on Romanian wordlist",
         "examples": ["bautura123", "Bautura123", "Bautura1", "123bautura", "12Bautura"],
-        "reqs": ["hashcat", "john", "dic_lc_rom.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_rom.txt", "johnrules"],
         "link": ""
     },
     {
@@ -74,7 +74,7 @@
         "wordsize": 521188,
         "desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on Romanian names",
         "examples": ["gabriela123", "Gabriela123", "Gabriela1", "123gabriela", "12Gabriela"],
-        "reqs": ["hashcat", "john", "nume_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_bac2018.txt", "johnrules"],
         "link": ""
     },
     {
@@ -86,7 +86,7 @@
         "wordsize": 999964,
         "desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on English words",
         "examples": ["something123", "Something123", "Something1", "123something", "12Something"],
-        "reqs": ["hashcat", "john", "dic_lc_eng.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_eng.txt", "johnrules"],
         "link": ""
     },
     {
@@ -109,7 +109,7 @@
         "wordsize": 57496000,
         "desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on Romanian words. Does not overlap with Simple123_rom.",
         "examples": ["bautura64", "Bautura13", "Bautura18", "69bautura", "42Bautura"],
-        "reqs": ["hashcat", "john", "dic_lc_rom.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_rom.txt", "johnrules"],
         "link": ""
     },
     {
@@ -121,7 +121,7 @@
         "wordsize": 10567244,
         "desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on Romanian names. Does not overlap with Simple123_bac.",
         "examples": ["gabriela64", "Gabriela13", "Gabriela18", "69gabriela", "42Gabriela"],
-        "reqs": ["hashcat", "john", "nume_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_bac2018.txt, "johnrules""],
         "link": ""
     },
     {
@@ -133,7 +133,7 @@
         "wordsize": 20527108,
         "desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on English words. Does not overlap with Simple123_eng.",
         "examples": ["something64", "Something13", "Something18", "69something", "42Something"],
-        "reqs": ["hashcat", "john", "dic_lc_eng.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_eng.txt", "johnrules"],
         "link": ""
     },
     {
@@ -156,7 +156,7 @@
         "wordsize": 13795144,
         "desc": "John the ripper Jumbo rules applied on more popular romanian names",
         "examples": [],
-        "reqs": ["hashcat", "john", "nume_comune_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_comune_bac2018.txt", "johnrules"],
         "link": "/dict?dict=nume_comune_bac2018.txt"
     },
     {
@@ -168,7 +168,7 @@
         "wordsize": 13810205,
         "desc": "John the ripper Jumbo rules applied on top 2500 English words (at least 4 letters)",
         "examples": [],
-        "reqs": ["hashcat", "john", "top_2500_engl.txt"],
+        "reqs": ["hashcat", "john", "top_2500_engl.txt", "johnrules"],
         "link": "/dict?dict=top_2500_engl.txt"
     },
     {
@@ -180,7 +180,7 @@
         "wordsize": 28707702,
         "desc": "Custom rules that involve mostly blowjobs",
         "examples": ["PuieMonta", "SugeoRamona", "MuieAndrei", "muieana1"],
-        "reqs": ["hashcat", "john", "nume_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_bac2018.txt", "johnrules"],
         "link": ""
     },
     {
@@ -203,7 +203,7 @@
         "wordsize": 7049216,
         "desc": "Symbol appending, prepending and capitalization on Romanian words",
         "examples": ["bautura*", "Bautura(","&bautura", ":Bautura"],
-        "reqs": ["hashcat", "john", "dic_lc_rom.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_rom.txt", "johnrules"],
         "link": ""
     },
     {
@@ -215,7 +215,7 @@
         "wordsize": 2280576,
         "desc": "Symbol appending, prepending and capitalization on Romanian names",
         "examples": ["gabriela*", "Gabriela,", "+gabriela", "+Gabriela"],
-        "reqs": ["hashcat", "john", "nume_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_bac2018.txt", "johnrules"],
         "link": ""
     },
     {
@@ -227,7 +227,7 @@
         "wordsize": 4889472,
         "desc": "Symbol appending, prepending and capitalization on English words",
         "examples": ["something*", "Something*", "Something-",".Something"],
-        "reqs": ["hashcat", "john", "dic_lc_eng.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_eng.txt", "johnrules"],
         "link": ""
     },
     {
@@ -239,7 +239,7 @@
         "wordsize": 57496000,
         "desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on Romanian words",
         "examples": ["bautura1993", "Bautura1943", "2001bautura", "2099Bautura"],
-        "reqs": ["hashcat", "john", "dic_lc_rom.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_rom.txt", "johnrules"],
         "link": ""
     },
     {
@@ -251,7 +251,7 @@
         "wordsize": 26488000,
         "desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on Romanian names",
         "examples": ["gabriela1947", "Gabriela1919", "Gabriela2050", "2019Gabriela"],
-        "reqs": ["hashcat", "john", "nume_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_bac2018.txt", "johnrules"],
         "link": ""
     },
     {
@@ -263,7 +263,7 @@
         "wordsize": 49391200,
         "desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on English words",
         "examples": ["something2001", "Something2006", "Something1992", "2011something"],
-        "reqs": ["hashcat", "john", "dic_lc_eng.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_eng.txt", "johnrules"],
         "link": ""
     },
     {
@@ -330,7 +330,7 @@
         "wordsize": 163873280,
         "desc": "Symbol and number (both orders) appending, prepending and capitalization on Romanian words",
         "examples": ["bautura6*", "Bautura(6", "Bautura3)", "1&bautura", ":3Bautura"],
-        "reqs": ["hashcat", "john", "dic_lc_rom.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_rom.txt", "johnrules"],
         "link": ""
     },
     {
@@ -342,7 +342,7 @@
         "wordsize": 64821760,
         "desc": "Symbol and number (both orders) appending, prepending and capitalization on Romanian names",
         "examples": ["gabriela*1", "Gabriela/5", "+5gabriela", "9+Gabriela"],
-        "reqs": ["hashcat", "john", "nume_bac2018.txt"],
+        "reqs": ["hashcat", "john", "nume_bac2018.txt", "johnrules"],
         "link": ""
     },
     {
@@ -354,7 +354,7 @@
         "wordsize": 125073920,
         "desc": "Symbol and number (both orders) appending, prepending and capitalization on English words",
         "examples": ["something1*", "Something(8", "7*something", "<3Something"],
-        "reqs": ["hashcat", "john", "dic_lc_eng.txt"],
+        "reqs": ["hashcat", "john", "dic_lc_eng.txt", "johnrules"],
         "link": ""
     }
 ]

@@ -268,7 +268,7 @@ def getfile_v1(**kwargs):
     if file_ok(filename, kwargs["apikey"]):
         return ""
 
-    return send_from_directory(Configuration.application.static_folder, filename)
+    return send_from_directory(os.path.join(Configuration.application.static_folder, "crack"), filename)
 
 
 @api_api.route('/api/v1/checkfile', methods=['POST'])
@@ -303,6 +303,8 @@ def getmissing_v1(**_):
                 if req == "hashcat" or req == "john":
                     entry["type"] = "program"
                     entry["name"] = req
+                elif req == "johnrules":
+                    entry["path"] = "maskfiles/john.rules"
                 elif rule["type"] == "john":
                     entry["path"] = rule["baselist"]
                 elif rule["type"] == "wordlist":

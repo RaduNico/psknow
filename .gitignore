@@ -13,12 +13,12 @@ cracker/dict/maskfiles/*
 cracker/escapes/*
 !cracker/escapes/.gitkeep
 
-backend/static/dic_lc_eng.txt
-backend/static/dic_lc_rom.txt
-backend/static/nume_bac2018.txt
-backend/static/nume_comune_bac2018.txt
-backend/static/top_2500_engl.txt
-backend/static/wordlist-top4800-probable.txt
+backend/static/crack/dic_lc_eng.txt
+backend/static/crack/dic_lc_rom.txt
+backend/static/crack/nume_bac2018.txt
+backend/static/crack/nume_comune_bac2018.txt
+backend/static/crack/top_2500_engl.txt
+backend/static/crack/wordlist-top4800-probable.txt
 
 backend/secret_key
 backend/backendvenv
