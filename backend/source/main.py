@@ -12,6 +12,7 @@ from flask import Flask, request, flash, redirect, url_for, send_from_directory
 from flask_login import LoginManager
 
 application = Flask("psknow_backend", static_folder='static')
+Configuration.application = application
 application.register_blueprint(blob_api)
 application.register_blueprint(api_api)
 application.register_blueprint(upload_api)

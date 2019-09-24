@@ -4,6 +4,7 @@ import jwt
 import datetime
 import tempfile
 import os
+import traceback
 
 from .config import Configuration
 from .wrappers import not_admin
@@ -30,7 +31,7 @@ api_api = Blueprint('api_api', __name__)
 # Decorator that determines if a user is allowd to use the API
 def allowed_api(f):
     @wraps(f)
-    def fct(*args, **kwargs):
+    def allowed_api_fct(*args, **kwargs):
         crt_user = current_user.get_id()
         user_entry = Configuration.users.find_one({"username": crt_user})  # TODO make a try except. Check for none
 
@@ -48,13 +49,13 @@ def allowed_api(f):
 
         kwargs["user_entry"] = user_entry
         return f(*args, **kwargs)
-    return fct
+    return allowed_api_fct
 
 
 # Decorator that checks the validity of a API key sent
 def require_key(f):
     @wraps(f)
-    def fct(*args, **kwargs):
+    def require_key_fct(*args, **kwargs):
         api_key = request.form.get("apikey", None)
 
         if api_key is None:
@@ -77,13 +78,13 @@ def require_key(f):
         kwargs["apikey"] = api_key
 
         return f(*args, **kwargs)
-    return fct
+    return require_key_fct
 
 
 # Decorator that checks if the API currently has any job running
 def has_job(f):
     @wraps(f)
-    def fct(*args, **kwargs):
+    def has_job_fct(*args, **kwargs):
         cursor, error = Scheduler.get_reserved(kwargs["apikey"])
         data = next(cursor, None)
         if error != "":
@@ -95,12 +96,12 @@ def has_job(f):
         kwargs["job"] = data
 
         return f(*args, **kwargs)
-    return fct
+    return has_job_fct
 
 
 def job_running(f):
     @wraps(f)
-    def fct(*args, **kwargs):
+    def job_running_fct(*args, **kwargs):
         try:
             run_status = kwargs["job"]["reserved"]["status"]
         except KeyError:
@@ -110,18 +111,18 @@ def job_running(f):
             return jsonify({"success": False, "reason": "Job for this API is paused"})
 
         return f(*args, **kwargs)
-    return fct
+    return job_running_fct
 
 
 def exception_catcher(f):
     @wraps(f)
-    def fct(*args, **kwargs):
+    def exception_catcher_fct(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            Configuration.logger.error("Caught unexpected exception: '%s'" % e)
+            Configuration.logger.error("Caught unexpected exception: '%s', '%s'" % (traceback.format_exc(), e))
             return jsonify({"success": False, "reason": "Unexpected error"})
-    return fct
+    return exception_catcher_fct
 
 
 # Helper funtion that returns a dictionary from a utf-8 encoded jwt
@@ -245,6 +246,77 @@ def getwork_v1(**kwargs):
         return jsonify({"success": False, "reason": error})
 
     return jsonify({"success": True, "data": work})
+
+
+def file_ok(filename, apikey):
+    if '/' in filename:
+        Configuration.logger.warning("API key '%s' is trying to traverse!" % apikey)
+        return False
+
+    if filename is None or filename == "" or filename not in Configuration.api_file_names:
+        return False
+
+    return True
+
+
+@api_api.route('/api/v1/getfile', methods=['POST'])
+@exception_catcher
+@require_key
+def getfile_v1(**kwargs):
+    filename = request.form.get("file", None)
+
+    if file_ok(filename, kwargs["apikey"]):
+        return ""
+
+    return send_from_directory(Configuration.application.static_folder, filename)
+
+
+@api_api.route('/api/v1/checkfile', methods=['POST'])
+@exception_catcher
+@require_key
+def checkfile_v1(**kwargs):
+    filename = request.form.get("file", None)
+
+    if file_ok(filename, kwargs["apikey"]):
+        return jsonify({"success": True})
+
+    return jsonify({"success": False, "reason": "File key missing!"})
+
+
+@api_api.route('/api/v1/getmissing', methods=['POST'])
+@exception_catcher
+@require_key
+def getmissing_v1(**_):
+    capabilities = request.form.getlist("capabilities", None)
+
+    if capabilities is None:
+        return jsonify({"success": False, "reason": "Capabilities were not sent!"})
+
+    rule_reqs = set()
+    response = []
+    for rule in Configuration.get_active_rules():
+        for req in rule["reqs"]:
+            if req not in capabilities and req not in rule_reqs:
+                rule_reqs.add(req)
+                entry = {"type": "file"}
+
+                if req == "hashcat" or req == "john":
+                    entry["type"] = "program"
+                    entry["name"] = req
+                elif rule["type"] == "john":
+                    entry["path"] = rule["baselist"]
+                elif rule["type"] == "wordlist":
+                    entry["path"] = rule["wordlist"]
+                elif rule["type"] == "generated":
+                    entry["path"] = rule["command"].split()[0]
+                elif rule["type"] == "filemask_hashcat":
+                    entry["path"] = rule["filemask_path"]
+                else:
+                    Configuration.logger.error("Unknown type of rule '%s'" % rule["type"])
+                    return jsonify({"success": False, "reason": "Rule requirement error!"})
+                response.append(entry)
+
+    return jsonify({"success": True, "data": response})
 
 
 # TODO update pause to work like this - if the user pauses give a week to resume

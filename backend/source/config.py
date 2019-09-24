@@ -12,6 +12,8 @@ from threading import Lock
 
 
 class Configuration(object):
+    application = None
+
     # Database Variables
     database_location = '127.0.0.1:27017'
     admin_account = "pandora"
@@ -99,6 +101,9 @@ class Configuration(object):
     rule_priorities = {}
     wifis_lock = Lock()
     rule_dict = {}
+    api_file_names = ["wordlist-top4800-probable.txt", "dic_lc_rom.txt", "nume_bac2018.txt", "dic_lc_eng.txt",
+                      "top_10mil_hibp.txt", "date_generator.py", "nume_comune_bac2018.txt", "top_2500_engl.txt",
+                      "three_years.hcmask", "top_10-100mil_hibp.txt", "rest_hibp.txt"]
 
     allowed_eta_regex = re.compile("^[a-zA-Z0-9,()]+$")
 
