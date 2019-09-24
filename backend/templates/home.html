@@ -52,13 +52,13 @@
             </tr>
             {% for handshake in cracked %}
             <tr>
-                <td>{{ handshake[0] }}</td>
-                <td>{{ handshake[1] }}</td>
-                <td>{{ handshake[2] }}</td>
-                <td>{{ handshake[3] }}</td>
-                <td>{{ handshake[4] }}</td>
-                <td>{{ handshake[5] }}</td>
-                <td>{{ handshake[6] }}</td>
+                <td>{{ handshake["ssid"] }}</td>
+                <td>{{ handshake["mac"] }}</td>
+                <td>{{ handshake["hs_type"] }}</td>
+                <td>{{ handshake["date_added"] }}</td>
+                <td>{{ handshake["cracked_by"] }}</td>
+                <td>{{ handshake["password"] }}</td>
+                <td>{{ handshake["date"] }}</td>
             </tr>
             {% endfor %}
         </table>
@@ -77,12 +77,12 @@
             </tr>
             {% for handshake in uncracked %}
             <tr>
-                <td>{{ handshake[0] }}</td>
-                <td>{{ handshake[1] }}</td>
-                <td>{{ handshake[2] }}</td>
-                <td>{{ handshake[3] }}</td>
-                <td>{{ handshake[4] }}</td>
-                <td>{{ handshake[5] }}</td>
+                <td>{{ handshake["ssid"] }}</td>
+                <td>{{ handshake["mac"] }}</td>
+                <td>{{ handshake["hs_type"] }}</td>
+                <td>{{ handshake["date_added"] }}</td>
+                <td>{{ handshake["tried_rules"] }}</td>
+                <td>{{ handshake["eta"] }}</td>
             </tr>
             {% endfor %}
         </table>

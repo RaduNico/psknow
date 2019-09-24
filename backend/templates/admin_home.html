@@ -45,7 +45,7 @@
     {% for user_hs_pair in user_handshakes %}
         <div class="userbox">
         <h2>{{ user_hs_pair[0] }}</h2>
-        {% if user_hs_pair[1][0]|length > 0 %}
+        {% if user_hs_pair[1]["uncracked"]|length > 0 %}
             <table>
                 <tr>
                     <th>Wifi Name</th>
@@ -55,21 +55,21 @@
                     <th>Tried rules</th>
                     <th>Estimated time</th>
                 </tr>
-                {% for handshake in user_hs_pair[1][0] %}
+                {% for handshake in user_hs_pair[1]["uncracked"] %}
                 <tr>
-                    <td>{{ handshake[0] }}</td>
-                    <td>{{ handshake[1] }}</td>
-                    <td>{{ handshake[2] }}</td>
-                    <td>{{ handshake[3] }}</td>
-                    <td>{{ handshake[4] }}</td>
-                    <td>{{ handshake[5] }}</td>
+                    <td>{{ handshake["ssid"] }}</td>
+                    <td>{{ handshake["mac"] }}</td>
+                    <td>{{ handshake["hs_type"] }}</td>
+                    <td>{{ handshake["date_added"] }}</td>
+                    <td>{{ handshake["tried_rules"] }}</td>
+                    <td>{{ handshake["eta"] }}</td>
                 </tr>
                 {% endfor %}
             </table>
         {% else %}
             <h2>No uncracked handshakes</h2>
         {% endif %}
-        {% if user_hs_pair[1][1]|length > 0 %}
+        {% if user_hs_pair[1]["cracked"]|length > 0 %}
             <br>
             <table>
                 <tr>
@@ -81,15 +81,15 @@
                     <th>Password</th>
                     <th>Date Cracked</th>
                 </tr>
-                {% for handshake in user_hs_pair[1][1] %}
+                {% for handshake in user_hs_pair[1]["cracked"] %}
                 <tr>
-                    <td>{{ handshake[0] }}</td>
-                    <td>{{ handshake[1] }}</td>
-                    <td>{{ handshake[2] }}</td>
-                    <td>{{ handshake[3] }}</td>
-                    <td>{{ handshake[4] }}</td>
-                    <td>{{ handshake[5] }}</td>
-                    <td>{{ handshake[6] }}</td>
+                    <td>{{ handshake["ssid"] }}</td>
+                    <td>{{ handshake["mac"] }}</td>
+                    <td>{{ handshake["hs_type"] }}</td>
+                    <td>{{ handshake["date_added"] }}</td>
+                    <td>{{ handshake["cracked_by"] }}</td>
+                    <td>{{ handshake["password"] }}</td>
+                    <td>{{ handshake["date"] }}</td>
                 </tr>
                 {% endfor %}
             </table>

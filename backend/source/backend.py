@@ -10,33 +10,39 @@ from flask_login import login_user, logout_user, login_required, current_user
 blob_api = Blueprint('blob_api', __name__)
 
 
-def get_cracked_tuple(handshake, document):
-    ssid = handshake["SSID"]
-    mac = handshake["MAC"]
-    hs_type = handshake["handshake_type"]
-    date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
-    cracked_by = handshake["cracked_rule"]
+def get_cracked_tuple(document):
+    handshake = document["handshake"]
+    result = dict()
 
-    password = handshake["password"]
-    date = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
-    raw_date = handshake["date_cracked"]
+    result["ssid"] = handshake["SSID"]
+    result["mac"] = handshake["MAC"]
+    result["hs_type"] = handshake["handshake_type"]
+    result["date_added"] = document["date_added"].strftime('%H:%M - %d.%m.%Y')
+    result["cracked_by"] = handshake["cracked_rule"]
 
-    return ssid, mac, hs_type, date_added, cracked_by, password, date, raw_date
+    result["password"] = handshake["password"]
+    result["date"] = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
+    result["raw_date"] = handshake["date_cracked"]
+
+    return result
 
 
-def get_uncracked_tuple(handshake, document, reserved_data):
-    ssid = handshake["SSID"]
-    mac = handshake["MAC"]
-    hs_type = handshake["handshake_type"]
-    date_added = document["date_added"].strftime('%H:%M - %d.%m.%Y')
+def get_uncracked_tuple(document):
+    handshake = document["handshake"]
+    result = dict()
+
+    result["ssid"] = handshake["SSID"]
+    result["mac"] = handshake["MAC"]
+    result["hs_type"] = handshake["handshake_type"]
+    result["date_added"] = document["date_added"].strftime('%H:%M - %d.%m.%Y')
     if handshake["active"]:
-        tried_rules = "Trying rule %s" % reserved_data["tried_rule"]
-        eta = handshake["eta"]
+        result["tried_rules"] = "Trying rule %s" % document["reserved"]["tried_rule"]
+        result["eta"] = handshake["eta"]
     else:
-        tried_rules = "%s/%s" % (len(handshake["tried_dicts"]), Configuration.number_rules)
-        eta = ""
+        result["tried_rules"] = "%s/%s" % (len(handshake["tried_dicts"]), Configuration.number_rules)
+        result["eta"] = ""
 
-    return ssid, mac, hs_type, date_added, tried_rules, eta
+    return result
 
 
 @blob_api.route('/admin/', methods=['GET', 'POST'])
@@ -100,18 +106,16 @@ def home():
             crt_user = file_structure["users"][0]
 
             if crt_user not in user_handshakes:
-                user_handshakes[crt_user] = [[], []]
+                user_handshakes[crt_user] = {"cracked": [], "uncracked": []}
 
-            handshake = file_structure["handshake"]
-            if handshake["password"] == "":
-                user_handshakes[crt_user][0].append(get_uncracked_tuple(handshake, file_structure,
-                                                                        file_structure["reserved"]))
+            if file_structure["handshake"]["password"] == "":
+                user_handshakes[crt_user]["uncracked"].append(get_uncracked_tuple(file_structure))
             else:
-                user_handshakes[crt_user][1].append(get_cracked_tuple(handshake, file_structure))
+                user_handshakes[crt_user]["cracked"].append(get_cracked_tuple(file_structure))
 
-        # Sort based on crack date and remove trailing raw date
+        # Sort based on crack date using raw date field
         for entry in user_handshakes.values():
-            entry[1] = sorted(entry[1], key=lambda k: k[7])
+            entry["cracked"] = sorted(entry["cracked"], key=lambda k: k["raw_date"])
 
         # Transform dict to list and sort by username
         user_handshakes = sorted(user_handshakes.items(), key=lambda k: k[0])
@@ -131,12 +135,12 @@ def home():
             # Sort in python by the SSID
             handshake = file_structure["handshake"]
             if handshake["password"] == "":
-                uncracked.append(get_uncracked_tuple(handshake, file_structure, file_structure["reserved"]))
+                uncracked.append(get_uncracked_tuple(file_structure))
             else:
-                cracked.append(get_cracked_tuple(handshake, file_structure))
+                cracked.append(get_cracked_tuple(file_structure))
 
-    # Sort based on crack date and remove trailing raw date
-    cracked = sorted(cracked, key=lambda k: k[7])
+        # Sort based on crack date using raw date field
+    cracked = sorted(cracked, key=lambda k: k["raw_date"])
 
     return render_template('home.html', uncracked=uncracked, cracked=cracked, logged_in=logged_in)
 

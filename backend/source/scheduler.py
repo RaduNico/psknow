@@ -155,11 +155,38 @@ class Scheduler:
             return b64encode(fd.read()).decode("utf8")
 
     @staticmethod
-    def _extract_rule_with_parameters(entries, parameters):
-        return {}
+    def _extract_rule_with_parameters(entries, capabilities):
+        result = None
+        best_prio = 900000
+        best_rule_prio = 900000
+        for full_entry in entries:
+            entry = full_entry["value"]
+            not_good = False
+
+            # Check if the client can run this rule based on capabilities
+            rule = Configuration.rule_dict[entry["next_rule"]]
+            Configuration.logger.fatal("")
+            Configuration.logger.fatal("capabilities %s, rule_reqs %s" % (capabilities, rule["reqs"]))
+            for requirement in rule["reqs"]:
+                if requirement not in capabilities:
+                    Configuration.logger.fatal("lacks '%s' capability" % requirement)
+                    not_good = True
+                    break
+            if not_good:
+                continue
+
+            # We have two parameters - the handshake priority which takes precedence and the rule priority
+            if best_prio > entry["priority"]:
+                result = entry
+                best_rule_prio = 900000
+                best_prio = entry["priority"]
+            elif best_prio == entry["priority"] and best_rule_prio > rule["priority"]:
+                best_rule_prio = rule["priority"]
+                result = entry
+        return result
 
     @staticmethod
-    def get_next_handshake(apikey, parameters=None):
+    def get_next_handshake(apikey, capabilities):
         task = deepcopy(Scheduler.default_task)
 
         query = {"handshake.open": False, "reserved_by": None, "handshake.password": "",
@@ -174,25 +201,28 @@ class Scheduler:
                 Configuration.logger.error("Error occured while doing the mapreduce: %s" % e)
                 return None, "Internal server error 101"
 
-            lowest_prio = min(map(lambda val: val["value"]["priority"], response["results"]))
-            entries = [x["value"] for x in response["results"] if x["value"]["priority"] == lowest_prio]
+            entries = response["results"]
 
-            Configuration.logger.fatal("lowest prio %s" % lowest_prio)
-
-            for res in entries:
-                Configuration.logger.critical(res)
-
-            if parameters is None:
-                lowest_prio = min(map(lambda val: Configuration.rule_priorities[val["next_rule"]], entries))
-                best_handshake = [val for val in entries
-                                  if Configuration.rule_priorities[val["next_rule"]] == lowest_prio][0]
-            else:
-                best_handshake = Scheduler._extract_rule_with_parameters(entries, parameters)
-
-            if best_handshake is None:
+            if len(entries) == 0:
                 return task, "No work to be done at the moment."
 
+            best_handshake = Scheduler._extract_rule_with_parameters(entries, capabilities)
+
+            if best_handshake is None:
+                return task, "No work can be done with current capabilities"
+
             Scheduler._reserve_handshake(best_handshake["id"], apikey, best_handshake["next_rule"])
+
+        task["handshake"]["data"] = Scheduler._get_hccapx_data(best_handshake)
+
+        if task["handshake"]["data"] is None:
+            Scheduler.release_handshake(best_handshake["id"])
+            return None, "Error getting handshake data from file."
+
+        task["handshake"]["ssid"] = best_handshake["ssid"]
+        task["handshake"]["mac"] = best_handshake["mac"]
+        task["handshake"]["file_type"] = best_handshake["file_type"]
+        task["handshake"]["handshake_type"] = best_handshake["handshake_type"]
 
         next_rule = Configuration.rule_dict[best_handshake["next_rule"]]
         task["rule"]["wordsize"] = next_rule["wordsize"]
@@ -207,24 +237,4 @@ class Scheduler:
 
         task["rule"]["aux_data"] = mapper[next_rule["type"]]
 
-        task["handshake"]["data"] = Scheduler._get_hccapx_data(best_handshake)
-        task["handshake"]["ssid"] = best_handshake["ssid"]
-        task["handshake"]["mac"] = best_handshake["mac"]
-        task["handshake"]["file_type"] = best_handshake["file_type"]
-        task["handshake"]["handshake_type"] = best_handshake["handshake_type"]
-
-        error = ""
-        if task["handshake"]["data"] is None:
-            error = "Error getting handshake data from file."
-            Scheduler.release_handshake(best_handshake["id"])
-
-        return task, error
-
-    @staticmethod
-    def get_specific_handshake():
-
-        # Cracker.crt_capture = next(capture_cursor, None)
-        # if Cracker.crt_capture is None:
-        #     return
-
-        return False
+        return task, ""

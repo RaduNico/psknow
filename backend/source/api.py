@@ -8,8 +8,9 @@ import os
 from .config import Configuration
 from .wrappers import not_admin
 from .scheduler import Scheduler
-from .database_helper import update_hs_id
+from .database_helper import update_hs_id, generic_find
 from .process import Process
+from .backend import get_cracked_tuple, get_uncracked_tuple
 
 from copy import deepcopy
 from flask import render_template, request, redirect, flash, url_for, Blueprint, send_from_directory, jsonify
@@ -112,6 +113,17 @@ def job_running(f):
     return fct
 
 
+def exception_catcher(f):
+    @wraps(f)
+    def fct(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            Configuration.logger.error("Caught unexpected exception: '%s'" % e)
+            return jsonify({"success": False, "reason": "Unexpected error"})
+    return fct
+
+
 # Helper funtion that returns a dictionary from a utf-8 encoded jwt
 def jwt_decode(token, api_key):
     return jwt.decode(token.encode("utf-8"), api_key)
@@ -192,7 +204,26 @@ def generate_key(**kwargs):
     return redirect(url_for('api_api.main_api'))
 
 
+@api_api.route('/api/v1/getwifis', methods=['POST'])
+@exception_catcher
+@require_key
+def getwifis_v1(**kwargs):
+    wifis, err = generic_find(Configuration.wifis, {"users": kwargs["user_entry"]["username"]}, api_query=True)
+    if err:
+        return jsonify({"success": False, "reason": "Database error."})
+
+    result = {"cracked": [], "uncracked": []}
+    for wifi in wifis:
+        if wifi["handshake"]["password"] == "":
+            result["uncracked"].append(get_uncracked_tuple(wifi))
+        else:
+            result["cracked"].append(get_cracked_tuple(wifi))
+
+    return jsonify({"success": True, "data": result})
+
+
 @api_api.route('/api/v1/getwork', methods=['POST'])
+@exception_catcher
 @require_key
 def getwork_v1(**kwargs):
     # Check if user has any running jobs
@@ -203,7 +234,13 @@ def getwork_v1(**kwargs):
     if has_reserved:
         return jsonify({"success": False, "reason": "This API key already has work reserved. "
                                                     "Resume or cancel current job."})
-    work, error = Scheduler.get_next_handshake(kwargs["apikey"])
+
+    capabilities = request.form.getlist("capabilities", None)
+
+    if capabilities is None:
+        return jsonify({"success": False, "reason": "Capabilities were not sent!"})
+
+    work, error = Scheduler.get_next_handshake(kwargs["apikey"], capabilities)
     if error != "":
         return jsonify({"success": False, "reason": error})
 
@@ -213,6 +250,7 @@ def getwork_v1(**kwargs):
 # TODO update pause to work like this - if the user pauses give a week to resume
 # TODO if a user does not pause give double of crack time then erase
 @api_api.route('/api/v1/pausework', methods=['POST'])
+@exception_catcher
 @require_key
 @has_job
 def pausework_v1(**kwargs):
@@ -226,6 +264,7 @@ def pausework_v1(**kwargs):
 
 
 @api_api.route('/api/v1/resumework', methods=['POST'])
+@exception_catcher
 @require_key
 @has_job
 def resumework_v1(**kwargs):
@@ -239,6 +278,7 @@ def resumework_v1(**kwargs):
 
 
 @api_api.route('/api/v1/stopwork', methods=['POST'])
+@exception_catcher
 @require_key
 @has_job
 def stopwork_v1(**kwargs):
@@ -249,6 +289,7 @@ def stopwork_v1(**kwargs):
 
 
 @api_api.route('/api/v1/sendeta', methods=['POST'])
+@exception_catcher
 @require_key
 @has_job
 @job_running
@@ -339,6 +380,7 @@ def not_cracked(f):
 
 
 @api_api.route('/api/v1/sendresult', methods=['POST'])
+@exception_catcher
 @require_key
 @has_job
 @not_cracked
