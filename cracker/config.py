@@ -1,45 +1,86 @@
 import sys
 import logbook
-import json
 import re
 import os
-from copy import deepcopy
-from pymongo import MongoClient
+import hashlib
+from shutil import which
 
 
 class Configuration(object):
-    # Database variables
-    database_location = '192.168.14.3:27017'
-    database_name = "psknow"
+    apikey = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJ1c2VyIjoicmFkdSIsImRhdGVfZ2VuZXJhdGVkIjoiMjAxOS0wOS0wOFQxOTo" \
+             "0Mzo1My4yNTExNDQiLCJrZXlfaWQiOiIxMDAwIiwibmFtZSI6Im11aWUifQ.opggNbRjlkv2S3GzzyK145CDKmZrzuoR9xxKZkFr" \
+             "HjnSpIfwaTO5G-wvu5AENUknItPePFrRTKd_ZIzaOq5MeQ"
+    john_path = "/home/pandora/sec/psknow/dependencies/sources/john/run/john"
 
-    # TODO move this in a private file
-    db_username = 'psknow'
-    db_password = 'Grtel5fmwvKcrxwoXWSTSEAcKRpeCAcgjG9Ty2A9'
+    # Remote location info
+    # remote_server = "https://pandorak.go.ro/"
+    remote_server = "http://192.168.14.103:9645/api/v1/"
+    capabilities = []
+    capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
+    programs = ["hashcat", "john"]
 
-    conn = None
-    db = None
-    wifis = None
-    admin = None
+    # Logging variables
+    log_filename = 'logs/cracker.log'
+    logLevel = "DEBUG"
+    # :logLevel = "INFO"
+    logger = None
 
-    admin_table_name = "MainControlTable"
+    @staticmethod
+    def dual_print(log, message):
+        log(message)
+        print(message)
+
+    @staticmethod
+    def gather_capabilities():
+        Configuration.capabilities = {}
+
+        if os.path.isfile("john-local.conf"):
+            Configuration.capabilities["john-local.conf"] = Configuration.sha1file("john-local.conf")
+
+        for directory in Configuration.capab_dirs:
+            if not os.path.isdir(directory):
+                continue
+
+            all_files = os.listdir(directory)
+
+            for file in all_files:
+                path = os.path.join(directory, file)
+                if os.path.isfile(path) and not file.startswith("."):
+                    Configuration.capabilities[file] = Configuration.sha1file(path)
+
+        for program in Configuration.programs:
+            # John path needs to be hardcoded it seems
+            if program == "john" and Configuration.john_path != "john" and os.path.exists(Configuration.john_path):
+                Configuration.capabilities[program] = None
+
+            if which(program) is not None:
+                Configuration.capabilities[program] = None
+
+    @staticmethod
+    def setup_logging():
+        Configuration.logger = logbook.Logger("")
+        Configuration.logger.handlers.append(logbook.FileHandler(Configuration.log_filename,
+                                                                 level=Configuration.logLevel))
+        Configuration.logger.info("Logging activated!")
+
+    @staticmethod
+    def sha1file(filepath):
+        with open(filepath, 'rb') as f:
+            return hashlib.sha1(f.read()).hexdigest()
+
+    @staticmethod
+    def initialize():
+        Configuration.setup_logging()
+        Configuration.gather_capabilities()
+
     default_hashcat_dict = {"progress": -1, "eta": "", "speed": ""}
 
-    # Handshake related variables
-    backend_local = False
-    backend_ip = "192.168.14.3"
-    backend_remote_handshake_path = "~/sec/psknow/backend/handshakes"
-    backend_handshake_path = '../backend/handshakes'
-    handshake_path = 'handshakes'
-
     # Cracking paths
-    john_path = "/home/pandora/PycharmProjects/psknow/helpers/sources/john/run/john"
     attack_path = 'crack'
-    hashcat_potfile_path = os.path.join(attack_path, 'hashcat.pot')  # TODO create file if it does not exist!
-    escapes_path = 'escapes'
+    hashcat_potfile_path = os.path.join(attack_path, 'hashcat.pot')
 
     # Cracking regexes
-    hashcat_left_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*](.*)[\n]?$")
-    hashcat_show_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*].*[:*](.*)[\n]?$")
+    hashcat_left_regex = re.compile("[0-9a-f]*[:*][0-9a-f]*[:*](.*)[:*](.*)[\n]?$")
     atoi_regex = re.compile(" *[-]?[0-9]*")
 
     hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]*)$")
@@ -47,105 +88,12 @@ class Configuration(object):
     hashcat_speed_re = re.compile("^Speed[.]#1[.]{9}:[ ]+([0-9]* ?.?H/s)")
 
     # Cracking variables
-    hot_words = ["parola", "password", "wifi"]
-    max_rules = -1
-    rules = None
-
-    # Accepted uplaod extensions
-    accepted_extensions = {"cap", "pcap", "16800", "pcapng"}
-
-    # Logging variables
-    log_filename = 'logs/cracker.log'
-    logLevel = "DEBUG"
-    # :logLevel = "INFO"
-    myLogger = None
-
-    @staticmethod
-    def database_conection():
-        conn_loc = "mongodb://%s:%s@%s/%s" % \
-                   (Configuration.db_username, Configuration.db_password,
-                    Configuration.database_location, Configuration.database_name)
-        Configuration.myLogger.debug("Connecting at %s" % conn_loc)
-
-        Configuration.conn = MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
-
-        Configuration.db = Configuration.conn[Configuration.database_name]
-        Configuration.wifis = Configuration.db["wifis"]
-        Configuration.admin = Configuration.db["admin"]
-
-    @staticmethod
-    def setup_logging():
-        Configuration.myLogger = logbook.Logger("")
-        Configuration.myLogger.handlers.append(logbook.FileHandler(Configuration.log_filename,
-                                                                   level=Configuration.logLevel))
-        Configuration.myLogger.info("Logging activated!")
-
-    @staticmethod
-    def read_rules():
-        try:
-            with open('rules') as json_data:
-                Configuration.rules = json.load(json_data)
-        except Exception as e:
-            Configuration.log_fatal("Error trying to load rules data: %s" % e)
-
-        rule_names = set()
-
-        for rule in Configuration.rules:
-            # Check for duplicate rules
-            if rule["name"] in rule_names:
-                Configuration.log_fatal("Duplicate rule %s" % rule["name"])
-            rule_names.add(rule["name"])
-
-            if rule["priority"] > Configuration.max_rules:
-                Configuration.max_rules = rule["priority"]
-
-        if "rules" in Configuration.db.list_collection_names():
-            Configuration.db["rules"].drop()
-
-        rules_db = Configuration.db["rules"]
-        rules_db.insert_many(Configuration.rules)
-
-    @staticmethod
-    def initialize():
-        Configuration.setup_logging()
-        Configuration.database_conection()
-        Configuration.read_rules()
-
-        if not Configuration.backend_local and Configuration.backend_ip == "":
-            Configuration.log_fatal("Backend is not local but location is not specified")
-
-    @staticmethod
-    def get_admin_table():
-        if Configuration.admin is None:
-            Configuration.log_fatal("Trying to get admin table before it is initialised!")
-
-        ret_val = Configuration.admin.find_one({"id": Configuration.admin_table_name})
-        if ret_val is None or "workload" not in ret_val:
-            Configuration.log_fatal("Database failure. Admin table could not be retrieved or 'workload' is not set")
-
-        Configuration.admin.update_one({"id": Configuration.admin_table_name}, {"$set": {"force": False}})
-
-        return ret_val
+    hot_words = ["parola", "password", "wifi"]  # TODO get those from server
 
     @staticmethod
     def log_fatal(message):
-        Configuration.myLogger.critical(message)
+        Configuration.dual_print(Configuration.logger.critical, message)
         sys.exit(-1)
-
-    # TODO make multiple base dictionaries available
-    @staticmethod
-    def get_next_rules_data(rule_number):
-        next_rule_number = Configuration.max_rules + 1
-        next_rule = None
-        for rule in Configuration.rules:
-            if next_rule_number > rule["priority"] > rule_number:
-                next_rule_number = rule["priority"]
-                next_rule = rule
-
-        if next_rule is None:
-            return None
-
-        return deepcopy(next_rule)
 
 
 if __name__ == '__main__':

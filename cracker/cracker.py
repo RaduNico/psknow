@@ -395,192 +395,190 @@ class Cracker:
         # Nothing is running now....let's fix that!
         # TODO make a Scheduler class and move this code in a schedule function
 
-        # TODO There is a bug that only happens when multiple handshakes are present in a file:
-        # TODO The first element returned by the capture cursor will be the one with the lowest crack_level
-        # TODO but it can be one with an already cracked password
-        capture_cursor = Configuration.wifis.find(
-            {"handshakes": {"$elemMatch": {"$and": [{"crack_level": {"$lt": Configuration.max_rules, "$gt": -1}},
-                                                    {"open": False}, {"password": ""}]}}}).\
-            sort([("priority", 1), ("handshakes.crack_level", 1)])
+        # capture_cursor = Configuration.wifis.find(
+        #     {"handshakes": {"$elemMatch": {"$and": [{"crack_level": {"$lt": Configuration.max_rules, "$gt": -1}},
+        #                                             {"open": False}, {"password": ""}]}}}).\
+        #     sort([("priority", 1), ("handshakes.crack_level", 1)])
+        #
+        # Cracker.crt_capture = next(capture_cursor, None)
+        # if Cracker.crt_capture is None:
+        #     return
+        #
+        # # See if the current found document has any already cracked files
+        # if Cracker.already_cracked(Cracker.crt_capture) != 0:
+        #     return
+        #
+        # # Filter out open and cracked handshakes from handshake list
+        # available_handshakes =\
+        #     [x for x in Cracker.crt_capture["handshakes"] if x["password"] == "" and
+        #      x["open"] is False and
+        #      x["crack_level"] < Configuration.max_rules]
+        #
+        # # Sort the target list so we get the lowest crack_level (easiest to crack)
+        # target_handshake = sorted(available_handshakes, key=lambda elem: elem["crack_level"])[0]
+        #
+        # # Memorize attack type - we need it to decode the output
+        # attack_type = target_handshake["handshake_type"]
+        # Cracker.crt_rule = Configuration.get_next_rules_data(target_handshake["crack_level"])
+        #
+        # # Sanity check
+        # die(Cracker.crt_rule is None, "No next rule found - target is curretly at maximum level!")
+        #
+        # # Set attacked file base on file type - if it is a (p)cap we need to convert it
+        # if Cracker.crt_capture["file_type"] == "16800":
+        #     attacked_file = Cracker.crt_capture["path"]
+        # else:
+        #     # Create a file in which we put the hccapx converted file
+        #     Cracker.path_temp_file = Cracker.get_hccapx_file(attack_type, Cracker.crt_capture["path"],
+        #                                                      filter_mac=target_handshake["MAC"])
+        #
+        #     # Sanity check. Should never happen because we filter all entries at upload
+        #     die(Cracker.path_temp_file is None, "Invalid handshake in file %s. Could not convert to hccapx" %
+        #         Cracker.crt_capture["path"])
+        #
+        #     attacked_file = Cracker.path_temp_file
+        #
+        # # Get commands needed to run hashcat
+        # generator_command, Cracker.attack_command, Cracker.scrambler =\
+        #     Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_file, target_handshake["SSID"])
+        #
+        # Cracker.to_crack = list(filter(None, SingleProcess(Cracker.attack_command +
+        #                                                    " --left").split_stdout()))
+        #
+        # # Sanity check. Should never happen because we filter all entries at upload
+        # die(len(Cracker.to_crack) == 0, "There are no networks to be attacked in document id='%s'!" %
+        #     Cracker.crt_capture["id"])
+        #
+        # display_targets = []
+        # for target_left in Cracker.to_crack:
+        #     group_obj = Configuration.hashcat_left_regex.match(target_left)
+        #     die(group_obj is None, "REGEX error! could not match the --left line:%s" % target_left)
+        #
+        #     essid = group_obj.group(2)
+        #     if attack_type == "PMKID":
+        #         essid = bytearray.fromhex(group_obj.group(2)).decode()
+        #
+        #     mac = ""
+        #     for target in Cracker.crt_capture["handshakes"]:
+        #         # Attack only targets we detect as being uncracked
+        #         if group_obj.group(1) == target["MAC"].replace(":", ""):
+        #             mac = target["MAC"]
+        #             target["active"] = True
+        #             target["eta"] = "Getting ETA..."
+        #
+        #     # TODO duplicates will be present if a capture file has multiple handshakes
+        #     display_targets.append("(" + mac + ", " + essid + ")")
+        #
+        # Cracker.update_handshake(Cracker.crt_capture["id"], Cracker.crt_capture["handshakes"])
+        #
+        # Configuration.myLogger.info("Trying rule %d on %s" % (Cracker.crt_rule["priority"], ', '.join(display_targets)))
+        # if generator_command == "":
+        #     Cracker.crt_process = SingleProcess(Cracker.attack_command)
+        # else:
+        #     Cracker.crt_process = DoubleProcess(generator_command, Cracker.attack_command)
 
-        Cracker.crt_capture = next(capture_cursor, None)
-        if Cracker.crt_capture is None:
-            return
+    # TODO remove this
+    # @staticmethod
+    # def copy_remote_handshake(filename, dest):
+    #     remote_command = "scp %s:%s/%s %s" % (Configuration.backend_ip,
+    #                                           Configuration.backend_remote_handshake_path,
+    #                                           filename, dest)
+    #     proc = SingleProcess(remote_command, crit=False)
+    #     proc.generate_output()
+    #     if proc.poll() != 0:
+    #         Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
+    #                                        (remote_command, proc.stderr()))
+    #     return proc.poll()
+    #
+    # @staticmethod
+    # def delete_remote_handshake(filename):
+    #     remote_command = "ssh %s rm %s/%s" % (Configuration.backend_ip,
+    #                                           Configuration.backend_remote_handshake_path,
+    #                                           filename)
+    #     proc = SingleProcess(remote_command, crit=False)
+    #     proc.generate_output()
+    #     if proc.poll() != 0:
+    #         Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
+    #                                        (remote_command, proc.stderr()))
+    #     return proc.poll()
 
-        # See if the current found document has any already cracked files
-        if Cracker.already_cracked(Cracker.crt_capture) != 0:
-            return
-
-        # Filter out open and cracked handshakes from handshake list
-        available_handshakes =\
-            [x for x in Cracker.crt_capture["handshakes"] if x["password"] == "" and
-             x["open"] is False and
-             x["crack_level"] < Configuration.max_rules]
-
-        # Sort the target list so we get the lowest crack_level (easiest to crack)
-        target_handshake = sorted(available_handshakes, key=lambda elem: elem["crack_level"])[0]
-
-        # Memorize attack type - we need it to decode the output
-        attack_type = target_handshake["handshake_type"]
-        Cracker.crt_rule = Configuration.get_next_rules_data(target_handshake["crack_level"])
-
-        # Sanity check
-        die(Cracker.crt_rule is None, "No next rule found - target is curretly at maximum level!")
-
-        # Set attacked file base on file type - if it is a (p)cap we need to convert it
-        if Cracker.crt_capture["file_type"] == "16800":
-            attacked_file = Cracker.crt_capture["path"]
-        else:
-            # Create a file in which we put the hccapx converted file
-            Cracker.path_temp_file = Cracker.get_hccapx_file(attack_type, Cracker.crt_capture["path"],
-                                                             filter_mac=target_handshake["MAC"])
-
-            # Sanity check. Should never happen because we filter all entries at upload
-            die(Cracker.path_temp_file is None, "Invalid handshake in file %s. Could not convert to hccapx" %
-                Cracker.crt_capture["path"])
-
-            attacked_file = Cracker.path_temp_file
-
-        # Get commands needed to run hashcat
-        generator_command, Cracker.attack_command, Cracker.scrambler =\
-            Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_file, target_handshake["SSID"])
-
-        Cracker.to_crack = list(filter(None, SingleProcess(Cracker.attack_command +
-                                                           " --left").split_stdout()))
-
-        # Sanity check. Should never happen because we filter all entries at upload
-        die(len(Cracker.to_crack) == 0, "There are no networks to be attacked in document id='%s'!" %
-            Cracker.crt_capture["id"])
-
-        display_targets = []
-        for target_left in Cracker.to_crack:
-            group_obj = Configuration.hashcat_left_regex.match(target_left)
-            die(group_obj is None, "REGEX error! could not match the --left line:%s" % target_left)
-
-            essid = group_obj.group(2)
-            if attack_type == "PMKID":
-                essid = bytearray.fromhex(group_obj.group(2)).decode()
-
-            mac = ""
-            for target in Cracker.crt_capture["handshakes"]:
-                # Attack only targets we detect as being uncracked
-                if group_obj.group(1) == target["MAC"].replace(":", ""):
-                    mac = target["MAC"]
-                    target["active"] = True
-                    target["eta"] = "Getting ETA..."
-
-            # TODO duplicates will be present if a capture file has multiple handshakes
-            display_targets.append("(" + mac + ", " + essid + ")")
-
-        Cracker.update_handshake(Cracker.crt_capture["id"], Cracker.crt_capture["handshakes"])
-
-        Configuration.myLogger.info("Trying rule %d on %s" % (Cracker.crt_rule["priority"], ', '.join(display_targets)))
-        if generator_command == "":
-            Cracker.crt_process = SingleProcess(Cracker.attack_command)
-        else:
-            Cracker.crt_process = DoubleProcess(generator_command, Cracker.attack_command)
-
-    @staticmethod
-    def copy_remote_handshake(filename, dest):
-        remote_command = "scp %s:%s/%s %s" % (Configuration.backend_ip,
-                                              Configuration.backend_remote_handshake_path,
-                                              filename, dest)
-        proc = SingleProcess(remote_command, crit=False)
-        proc.generate_output()
-        if proc.poll() != 0:
-            Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
-                                           (remote_command, proc.stderr()))
-        return proc.poll()
-
-    @staticmethod
-    def delete_remote_handshake(filename):
-        remote_command = "ssh %s rm %s/%s" % (Configuration.backend_ip,
-                                              Configuration.backend_remote_handshake_path,
-                                              filename)
-        proc = SingleProcess(remote_command, crit=False)
-        proc.generate_output()
-        if proc.poll() != 0:
-            Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
-                                           (remote_command, proc.stderr()))
-        return proc.poll()
-
-    @staticmethod
-    def get_new_handshakes():
-        # TODO Check for identical duplicates!
-        if Configuration.backend_local:
-            filenames = [f for f in os.listdir(Configuration.backend_handshake_path) if
-                         path.isfile(path.join(Configuration.backend_handshake_path, f))]
-        else:
-            remote_command = "ssh %s ls %s" % (Configuration.backend_ip, Configuration.backend_remote_handshake_path)
-            process = SingleProcess(remote_command, crit=False, nolog=True)
-            process.generate_output()
-            if process.poll() != 0:
-                Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
-                                               (remote_command, process.stderr()))
-                return
-            filenames = process.stdout().split()
-
-        # Relocate all files from webservice to final location
-        for file in filenames:
-            # Log in mongo!
-            document = Configuration.wifis.find_one({'path': file})
-
-            if document is None:
-                # TODO this can overwrite files
-                Configuration.myLogger.warning("Found file '%s' "
-                                               "which is not in database! Moving to escapes" % file)
-                if Configuration.backend_local:
-                    os.rename(path.join(Configuration.backend_handshake_path, file),
-                              os.path.join(Configuration.escapes_path, file))
-                else:
-                    ret = Cracker.copy_remote_handshake(file, Configuration.escapes_path)
-                    if ret == 0:
-                        Cracker.delete_remote_handshake(file)
-                continue
-
-            filename = file
-            number = 0
-            position = filename.rfind('.')
-            while True:
-                newpath = path.join(Configuration.handshake_path, filename)
-                if not path.isfile(newpath):
-                    # Change path
-                    document["path"] = newpath
-                    for handshake in document["handshakes"]:
-                        handshake["crack_level"] = 0
-
-                    # document["location"]["address"] = #TODO get city/address based on coordinates
-
-                    Configuration.myLogger.info("New handshake! Path is '%s'" % newpath)
-                    if Configuration.backend_local:
-                        os.rename(path.join(Configuration.backend_handshake_path, file), newpath)
-                    else:
-                        ret = Cracker.copy_remote_handshake(file, newpath)
-                        if ret == 0:
-                            Cracker.delete_remote_handshake(file)
-                        else:
-                            Configuration.log_fatal("Error while copying files from remote location. "
-                                                    "Stopping to prevent further damage.")
-                    break
-                number = number + 1
-                filename = file[:position] + str(number).rjust(3, '0') + file[position:]
-
-            upd = Configuration.wifis.update({"id": document["id"]}, document)
-
-            die(not upd["updatedExisting"], "Failed to update moving document = '%s' with ID = '%s' with message '%s'" %
-                (document, document["id"], upd))
-            die(upd["nModified"] > 1, "Database error! Multiple IDs %s present!" % document["id"])
-
-            Cracker.already_cracked(document)
-
-    @staticmethod
-    def update_admin_table():
-        admin_table = Configuration.get_admin_table()
-
-        Cracker.crt_workload = int(admin_table["workload"])
-        if admin_table["force"]:
-            Configuration.myLogger.info("Force restarting current cracking process!")
-            fast_stop()
+    # @staticmethod
+    # def get_new_handshakes():
+    #     # TODO Check for identical duplicates!
+    #     if Configuration.backend_local:
+    #         filenames = [f for f in os.listdir(Configuration.backend_handshake_path) if
+    #                      path.isfile(path.join(Configuration.backend_handshake_path, f))]
+    #     else:
+    #         remote_command = "ssh %s ls %s" % (Configuration.backend_ip, Configuration.backend_remote_handshake_path)
+    #         process = SingleProcess(remote_command, crit=False, nolog=True)
+    #         process.generate_output()
+    #         if process.poll() != 0:
+    #             Configuration.myLogger.warning("Error with remote command '%s':\n%s" %
+    #                                            (remote_command, process.stderr()))
+    #             return
+    #         filenames = process.stdout().split()
+    #
+    #     # Relocate all files from webservice to final location
+    #     for file in filenames:
+    #         # Log in mongo!
+    #         document = Configuration.wifis.find_one({'path': file})
+    #
+    #         if document is None:
+    #             # TODO this can overwrite files
+    #             Configuration.myLogger.warning("Found file '%s' "
+    #                                            "which is not in database! Moving to escapes" % file)
+    #             if Configuration.backend_local:
+    #                 os.rename(path.join(Configuration.backend_handshake_path, file),
+    #                           os.path.join(Configuration.escapes_path, file))
+    #             else:
+    #                 ret = Cracker.copy_remote_handshake(file, Configuration.escapes_path)
+    #                 if ret == 0:
+    #                     Cracker.delete_remote_handshake(file)
+    #             continue
+    #
+    #         filename = file
+    #         number = 0
+    #         position = filename.rfind('.')
+    #         while True:
+    #             newpath = path.join(Configuration.handshake_path, filename)
+    #             if not path.isfile(newpath):
+    #                 # Change path
+    #                 document["path"] = newpath
+    #                 for handshake in document["handshakes"]:
+    #                     handshake["crack_level"] = 0
+    #
+    #                 # document["location"]["address"] = #TODO get city/address based on coordinates
+    #
+    #                 Configuration.myLogger.info("New handshake! Path is '%s'" % newpath)
+    #                 if Configuration.backend_local:
+    #                     os.rename(path.join(Configuration.backend_handshake_path, file), newpath)
+    #                 else:
+    #                     ret = Cracker.copy_remote_handshake(file, newpath)
+    #                     if ret == 0:
+    #                         Cracker.delete_remote_handshake(file)
+    #                     else:
+    #                         Configuration.log_fatal("Error while copying files from remote location. "
+    #                                                 "Stopping to prevent further damage.")
+    #                 break
+    #             number = number + 1
+    #             filename = file[:position] + str(number).rjust(3, '0') + file[position:]
+    #
+    #         upd = Configuration.wifis.update({"id": document["id"]}, document)
+    #
+    #         die(not upd["updatedExisting"], "Failed to update moving document = '%s' with ID = '%s' with message '%s'" %
+    #             (document, document["id"], upd))
+    #         die(upd["nModified"] > 1, "Database error! Multiple IDs %s present!" % document["id"])
+    #
+    #         Cracker.already_cracked(document)
+    #
+    # @staticmethod
+    # def update_admin_table():
+    #     admin_table = Configuration.get_admin_table()
+    #
+    #     Cracker.crt_workload = int(admin_table["workload"])
+    #     if admin_table["force"]:
+    #         Configuration.myLogger.info("Force restarting current cracking process!")
+    #         fast_stop()
 
     @staticmethod
     def run():
@@ -593,9 +591,9 @@ class Cracker:
         signal.signal(signal.SIGTERM, signal_handler)
 
         while True:
-            Cracker.get_new_handshakes()
+            # Cracker.get_new_handshakes()
             Cracker.crack_existing_handshakes()
-            Cracker.update_admin_table()
+            # Cracker.update_admin_table()
             sleep(3)
 
 

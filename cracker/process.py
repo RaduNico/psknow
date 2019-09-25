@@ -51,7 +51,7 @@ class NoProcess:
             if type(cmd) is list:
                 cmd = ' '.join(cmd)
 
-            Configuration.myLogger.info('sending interrupt to PID %d (%s)' % (pid, cmd))
+            Configuration.logger.info('sending interrupt to PID %d (%s)' % (pid, cmd))
 
             if wait_time == 0.0:
                 os.kill(pid, signal.SIGTERM)
@@ -66,7 +66,7 @@ class NoProcess:
                 time.sleep(0.1)
                 if time.time() - start_time > wait_time:
                     # We waited too long for process to die, terminate it.
-                    Configuration.myLogger.info('Waited > %0.2f seconds for process to die, killing it' % wait_time)
+                    Configuration.logger.info('Waited > %0.2f seconds for process to die, killing it' % wait_time)
                     os.kill(pid, signal.SIGTERM)
                     process.terminate()
                     break
@@ -150,7 +150,7 @@ class DoubleProcess(NoProcess):
         disp1 = fst_cmd if type(fst_cmd) is str else " ".join(fst_cmd)
         disp2 = snd_cmd if type(snd_cmd) is str else " ".join(snd_cmd)
 
-        Configuration.myLogger.debug("Executing chained commands: '%s | %s'" % (disp1, disp2))
+        Configuration.logger.debug("Executing chained commands: '%s | %s'" % (disp1, disp2))
 
         # Output variables need to be mutable in order to modify them
         # from generic thread
@@ -249,7 +249,7 @@ class DoubleProcess(NoProcess):
             self.snd_err_r = self.snd_out_r = self.fst_err_r = None
 
         except AttributeError as e:
-            Configuration.myLogger.error("Attribute error raised %s" % e)
+            Configuration.logger.error("Attribute error raised %s" % e)
             pass
 
     # Check if the first process is ready to be stopped
@@ -283,7 +283,7 @@ class DoubleProcess(NoProcess):
 
             # TODO this can be generic. If this becomes static the poll needs to be checked against None
             if self.critical and self.fst_proc.poll() != 0:
-                Configuration.myLogger.debug("Process %s exited with status %d. Stderr:\n%s" %
+                Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
                                              (self.fst_cmd, self.fst_proc.poll(), None))
                 self._force_cleanup()
                 sys.exit(self.fst_proc.poll())
@@ -330,7 +330,7 @@ class DoubleProcess(NoProcess):
             if self.critical and self.snd_proc.poll() != 0:
                 # Second process could be hashcat which sometimes returns 1 but no error
                 if DoubleProcess.command_is_hashcat(self.snd_cmd) and self.snd_proc.poll() != 1:
-                    Configuration.myLogger.debug("Process %s exited with status %d. Stderr:\n%s" %
+                    Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
                                                  (self.snd_cmd, self.snd_proc.poll(), self.snd_err))
                     self._force_cleanup()
                     sys.exit(self.snd_proc.poll())
@@ -389,9 +389,9 @@ class SingleProcess(NoProcess):
 
         if not nolog:
             if type(cmd) is str:
-                Configuration.myLogger.debug("Executing command: '%s'" % self.cmd)
+                Configuration.logger.debug("Executing command: '%s'" % self.cmd)
             else:
-                Configuration.myLogger.debug("Executing command: '%s'" % " ".join(self.cmd))
+                Configuration.logger.debug("Executing command: '%s'" % " ".join(self.cmd))
 
         # Output variables need to be mutable in order to modify them
         # from generic thread
@@ -482,7 +482,7 @@ class SingleProcess(NoProcess):
             self.in_r = SingleProcess._close_helper(self.in_r)[0]
 
         except AttributeError as e:
-            Configuration.myLogger.error("Attribute error raised %s" % e)
+            Configuration.logger.error("Attribute error raised %s" % e)
             pass
 
     # Check if the process is ready to be stopped
@@ -521,7 +521,7 @@ class SingleProcess(NoProcess):
             if self.critical and self.proc.poll() != 0:
                 # Second process could be hashcat which sometimes returns 1 but no error
                 if SingleProcess.command_is_hashcat(self.cmd) and self.proc.poll() != 1:
-                    Configuration.myLogger.debug("Process %s exited with status %d. Stderr:\n%s" %
+                    Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
                                                  (self.cmd, self.proc.poll(), self.err))
                     self._force_cleanup()
                     sys.exit(self.proc.poll())
