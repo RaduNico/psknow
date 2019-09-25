@@ -318,7 +318,7 @@ class Configuration(object):
                     new_mtime, _ = Configuration.get_mtime_for_cap_file(data["path"])
 
                     # last_change does not exist in generated file or a change occured
-                    if old_mtime is None or old_mtime < new_mtime:
+                    if new_mtime is None or old_mtime is None or old_mtime < new_mtime:
                         Configuration.logger.info("File '%s' was updated, reloading data" % name)
                         Configuration.set_cap_dict_data(name, data, final_dict)
                     else:

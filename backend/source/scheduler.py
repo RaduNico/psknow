@@ -157,8 +157,8 @@ class Scheduler:
     @staticmethod
     def _extract_rule_with_parameters(entries, capabilities):
         result = None
-        best_prio = 900000
-        best_rule_prio = 900000
+        hs_prio = 900000
+        rule_prio = 900000
         for full_entry in entries:
             entry = full_entry["value"]
             not_good = False
@@ -174,12 +174,12 @@ class Scheduler:
                 continue
 
             # We have two parameters - the handshake priority which takes precedence and the rule priority
-            if best_prio > entry["priority"]:
+            if hs_prio > entry["priority"]:
                 result = entry
-                best_rule_prio = 900000
-                best_prio = entry["priority"]
-            elif best_prio == entry["priority"] and best_rule_prio > rule["priority"]:
-                best_rule_prio = rule["priority"]
+                rule_prio = rule["priority"]
+                hs_prio = entry["priority"]
+            elif hs_prio == entry["priority"] and rule_prio > rule["priority"]:
+                rule_prio = rule["priority"]
                 result = entry
         return result
 
@@ -227,10 +227,14 @@ class Scheduler:
         task["rule"]["type"] = next_rule["type"]
         task["rule"]["name"] = next_rule["name"]
 
+        data = None
+
         if next_rule["type"] == "john":
-            task["rule"]["aux_data"] = {"rule": next_rule.get("rule", None),
-                                        "baselist": Configuration.cap_dict[next_rule["path"]]["path"]}
+            data = {"rule": next_rule.get("rule", None),
+                    "baselist": Configuration.cap_dict[next_rule["path"]]["path"]}
         elif next_rule["path"] != "":
-            task["rule"]["aux_data"] = Configuration.cap_dict[next_rule["path"]]["path"]
+            data = Configuration.cap_dict[next_rule["path"]]["path"]
+
+        task["rule"]["aux_data"] = data
 
         return task, ""
