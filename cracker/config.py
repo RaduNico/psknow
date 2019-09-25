@@ -3,6 +3,7 @@ import logbook
 import re
 import os
 import hashlib
+import json
 from shutil import which
 
 
@@ -13,7 +14,7 @@ class Configuration(object):
     john_path = "/home/pandora/sec/psknow/dependencies/sources/john/run/john"
 
     # Remote location info
-    # remote_server = "https://pandorak.go.ro/"
+    # remote_server = "https://pandorak.go.ro/api/v1/"
     remote_server = "http://192.168.14.103:9645/api/v1/"
     capabilities = []
     capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
@@ -25,53 +26,8 @@ class Configuration(object):
     # :logLevel = "INFO"
     logger = None
 
-    @staticmethod
-    def dual_print(log, message):
-        log(message)
-        print(message)
-
-    @staticmethod
-    def gather_capabilities():
-        Configuration.capabilities = {}
-
-        if os.path.isfile("john-local.conf"):
-            Configuration.capabilities["john-local.conf"] = Configuration.sha1file("john-local.conf")
-
-        for directory in Configuration.capab_dirs:
-            if not os.path.isdir(directory):
-                continue
-
-            all_files = os.listdir(directory)
-
-            for file in all_files:
-                path = os.path.join(directory, file)
-                if os.path.isfile(path) and not file.startswith("."):
-                    Configuration.capabilities[file] = Configuration.sha1file(path)
-
-        for program in Configuration.programs:
-            # John path needs to be hardcoded it seems
-            if program == "john" and Configuration.john_path != "john" and os.path.exists(Configuration.john_path):
-                Configuration.capabilities[program] = None
-
-            if which(program) is not None:
-                Configuration.capabilities[program] = None
-
-    @staticmethod
-    def setup_logging():
-        Configuration.logger = logbook.Logger("")
-        Configuration.logger.handlers.append(logbook.FileHandler(Configuration.log_filename,
-                                                                 level=Configuration.logLevel))
-        Configuration.logger.info("Logging activated!")
-
-    @staticmethod
-    def sha1file(filepath):
-        with open(filepath, 'rb') as f:
-            return hashlib.sha1(f.read()).hexdigest()
-
-    @staticmethod
-    def initialize():
-        Configuration.setup_logging()
-        Configuration.gather_capabilities()
+    old_sha1s = None
+    sha1s_filename = "crack/sha1s.txt"
 
     default_hashcat_dict = {"progress": -1, "eta": "", "speed": ""}
 
@@ -89,6 +45,96 @@ class Configuration(object):
 
     # Cracking variables
     hot_words = ["parola", "password", "wifi"]  # TODO get those from server
+
+    @staticmethod
+    def dual_print(log, message):
+        log(message)
+        print(message)
+
+    @staticmethod
+    def check_file(path, file):
+        flag = False
+        new_mtime = os.stat(path).st_mtime
+
+        # If sha1 was calculated before and the file was not changed use last modification
+        if file in Configuration.old_sha1s and Configuration.old_sha1s[file]["last_change"] == new_mtime:
+            Configuration.capabilities[file] = Configuration.old_sha1s[file]["sha1"]
+        else:
+            print("calculating sha1 for %s" % file)
+            flag = True
+            sha1 = Configuration.sha1file(path)
+            Configuration.capabilities[file] = sha1
+            Configuration.old_sha1s[file] = {"last_change": new_mtime, "sha1": sha1}
+
+        return flag
+
+    @staticmethod
+    def gather_capabilities():
+        Configuration.capabilities = {}
+        sha1_file_changed = False
+
+        if os.path.isfile("john-local.conf") and Configuration.check_file("john-local.conf", "john-local.conf"):
+                sha1_file_changed = True
+
+        for directory in Configuration.capab_dirs:
+            if not os.path.isdir(directory):
+                continue
+
+            all_files = os.listdir(directory)
+
+            for file in all_files:
+                path = os.path.join(directory, file)
+                if os.path.isfile(path) and not file.startswith("."):
+                    if Configuration.check_file(path, file):
+                        sha1_file_changed = True
+
+        if sha1_file_changed:
+            try:
+                with open(Configuration.sha1s_filename, "w+") as fd:
+                    json.dump(Configuration.old_sha1s, fd, indent=4)
+            except Exception as e:
+                Configuration.log_fatal("Error trying to dump data in %s: %s" % (Configuration.sha1s_filename, e))
+
+        for program in Configuration.programs:
+            # John path needs to be hardcoded it seems
+            if program == "john" and Configuration.john_path != "john" and os.path.exists(Configuration.john_path):
+                Configuration.capabilities[program] = None
+
+            if which(program) is not None:
+                Configuration.capabilities[program] = None
+
+    @staticmethod
+    def setup_logging():
+        Configuration.logger = logbook.Logger("")
+        Configuration.logger.handlers.append(logbook.FileHandler(Configuration.log_filename,
+                                                                 level=Configuration.logLevel))
+        Configuration.logger.info("Logging activated!")
+
+    @staticmethod
+    def load_sha1s():
+        Configuration.old_sha1s = {}
+        if not os.path.exists(Configuration.sha1s_filename):
+            with open(Configuration.sha1s_filename, "w+") as _:
+                return
+
+        try:
+            with open(Configuration.sha1s_filename) as fd:
+                Configuration.old_sha1s = json.load(fd)
+        except json.decoder.JSONDecodeError:
+            return
+        except Exception as e:
+            Configuration.log_fatal("Error trying to load %s data: %s" % (Configuration.sha1s_filename, e))
+
+    @staticmethod
+    def sha1file(filepath):
+        with open(filepath, 'rb') as f:
+            return hashlib.sha1(f.read()).hexdigest()
+
+    @staticmethod
+    def initialize():
+        Configuration.setup_logging()
+        Configuration.load_sha1s()
+        Configuration.gather_capabilities()
 
     @staticmethod
     def log_fatal(message):

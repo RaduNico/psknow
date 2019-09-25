@@ -87,7 +87,6 @@ class Cracker:
             generator = rule["aux_data"]
 
         elif rule["type"] == "john":
-            Configuration.logger.critical("teappappasd %s" % rule["aux_data"])
             generator = "%s --min-length=8 --wordlist=%s --rules=%s --stdout" %\
                         (Configuration.john_path, rule["aux_data"]["baselist"], rule["aux_data"]["rule"])
 
@@ -320,7 +319,7 @@ class Cracker:
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        Cracker.resume_work()
+        # Cracker.resume_work()
 
         while True:
             Cracker.crack_existing_handshakes()

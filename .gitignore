@@ -3,6 +3,7 @@ cracker/dict/top_10-100mil_hibp.txt
 cracker/dict/top_10mil_hibp.txt
 
 cracker/crack/hashcat.pot
+cracker/crack/sha1s.txt
 cracker/logs/*.log
 cracker/dict
 cracker/john-local.conf
