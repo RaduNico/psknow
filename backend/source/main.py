@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import sys
 
 from .config import Configuration
 from .backend import blob_api
@@ -11,8 +12,7 @@ from .user import User
 from flask import Flask, request, flash, redirect, url_for, send_from_directory
 from flask_login import LoginManager
 
-application = Flask("psknow_backend", static_folder='static')
-Configuration.application = application
+application = Flask("psknow_backend", static_folder=Configuration.static_folder)
 application.register_blueprint(blob_api)
 application.register_blueprint(api_api)
 application.register_blueprint(upload_api)
@@ -54,17 +54,5 @@ def send_dict():
 
 
 if __name__ == "__main__":
-    # Manually initialize app
-    application.secret_key = Configuration.get_key_from_file("keys/secret_key")
-    application.api_secret_key = Configuration.get_key_from_file("keys/api_secret_key")
-
-    application.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
-
-    Configuration.initialize()
-    Configuration.logger = application.logger
-    application.run(host='127.0.0.1', port='9645')
-else:
-    gunicorn_logger = logging.getLogger('gunicorn.error')
-    application.logger.handlers = gunicorn_logger.handlers
-    application.logger.setLevel(gunicorn_logger.level)
-    Configuration.logger = application.logger
+    print("Run with gunicorn")
+    sys.exit(-1)

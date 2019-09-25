@@ -1,8 +1,8 @@
 import sys
 import re
-import logging
 import os
 import json
+import hashlib
 
 from time import sleep
 from pymongo import MongoClient
@@ -12,7 +12,7 @@ from threading import Lock
 
 
 class Configuration(object):
-    application = None
+    static_folder = "static"
 
     # Database Variables
     database_location = '127.0.0.1:27017'
@@ -90,7 +90,6 @@ class Configuration(object):
 
     # Logging variables
     logger = None
-    logLevel = logging.DEBUG
 
     # Secret keys
     api_secret_key = None
@@ -101,11 +100,13 @@ class Configuration(object):
     rule_priorities = {}
     wifis_lock = Lock()
     rule_dict = {}
-    api_file_names = ["wordlist-top4800-probable.txt", "dic_lc_rom.txt", "nume_bac2018.txt", "dic_lc_eng.txt",
-                      "top_10mil_hibp.txt", "date_generator.py", "nume_comune_bac2018.txt", "top_2500_engl.txt",
-                      "three_years.hcmask", "top_10-100mil_hibp.txt", "rest_hibp.txt", "john.rules"]
 
-    allowed_eta_regex = re.compile("^[a-zA-Z0-9,()]+$")
+    cap_template_name = "config_files/capabilities_template"
+    cap_generate_name = "config_files/capabilities_generated"
+
+    cap_dict = None
+
+    allowed_eta_regex = re.compile("^[a-zA-Z0-9,() .]+$")
 
     @staticmethod
     def get_key_from_file(filename):
@@ -212,7 +213,6 @@ class Configuration(object):
             Configuration.wifis = Configuration.db["wifis"]
             Configuration.users = Configuration.db["users"]
             Configuration.admin = Configuration.db["admin"]
-            Configuration.rules = Configuration.db["rules"]
             Configuration.retired = Configuration.db["retired"]
             Configuration.check_db_conn()
         except Exception as e:
@@ -243,16 +243,113 @@ class Configuration(object):
         Configuration.number_rules = len(Configuration.rule_dict)
 
     @staticmethod
+    def sha1file(filepath):
+        with open(filepath, 'rb') as f:
+            return hashlib.sha1(f.read()).hexdigest()
+
+    @staticmethod
+    def get_mtime_for_cap_file(path):
+        path = os.path.join(Configuration.static_folder, "crack", path.split("/")[-1])
+
+        if not os.path.exists(path):
+            return None, path
+
+        return os.stat(path).st_mtime, path
+
+    @staticmethod
+    def set_cap_dict_data(name, base_cap_dict, final_dict):
+        new_cap_dict = deepcopy(base_cap_dict)
+
+        last_mod, path = Configuration.get_mtime_for_cap_file(base_cap_dict["path"])
+
+        # File does not currently exist create empty
+        if last_mod is None:
+            final_dict[name] = new_cap_dict
+            new_cap_dict["sha1"] = ""
+            new_cap_dict["last_change"] = None
+            return
+
+        if base_cap_dict["last_change"] is None or\
+                (base_cap_dict["last_change"] is not None and last_mod > base_cap_dict["last_change"]):
+            new_cap_dict["last_change"] = last_mod
+            new_cap_dict["sha1"] = Configuration.sha1file(path)
+
+        if new_cap_dict["sha1"] == "":
+            Configuration.log_fatal("sha1 hash for '%s-%s' is empty" % (name, new_cap_dict))
+
+        final_dict[name] = new_cap_dict
+
+    @staticmethod
+    def read_caps():
+        def load_data(file):
+            json_data = None
+            try:
+                with open(file) as fd:
+                    json_data = json.load(fd)
+            except Exception as e:
+                Configuration.log_fatal("Error trying to load %s data: %s" % (Configuration.cap_template_name, e))
+            return json_data
+
+        cap_dict = load_data(Configuration.cap_template_name)
+        final_dict = dict()
+
+        # Check if the generated file exists
+        if not os.path.exists(Configuration.cap_generate_name):
+            Configuration.logger.info("No capabability files was generated, creating one.")
+            for name, data in cap_dict.items():
+                Configuration.set_cap_dict_data(name, data, final_dict)
+
+        # Check if the template changed
+        elif os.stat(Configuration.cap_template_name).st_mtime > os.stat(Configuration.cap_generate_name).st_mtime:
+            Configuration.logger.info("Template was updated. Generating new capabilities file.")
+            for name, data in cap_dict.items():
+                Configuration.set_cap_dict_data(name, data, final_dict)
+
+        # Generated file exists, try to load data from it
+        else:
+            old_cap_dict = load_data(Configuration.cap_generate_name)
+
+            for name, data in cap_dict.items():
+                # Check if data is already written in generated file
+                if name in old_cap_dict:
+                    # Try and load it from generated file
+                    old_mtime = old_cap_dict[name].get("last_change")
+                    new_mtime, _ = Configuration.get_mtime_for_cap_file(data["path"])
+
+                    # last_change does not exist in generated file or a change occured
+                    if old_mtime is None or old_mtime < new_mtime:
+                        Configuration.logger.info("File '%s' was updated, reloading data" % name)
+                        Configuration.set_cap_dict_data(name, data, final_dict)
+                    else:
+                        Configuration.logger.debug("Loaded data for '%s' from generated file." % name)
+                        final_dict[name] = deepcopy(old_cap_dict[name])
+                # Data for this entry is not present in generated file
+                else:
+                    Configuration.set_cap_dict_data(name, data, final_dict)
+
+        with open(Configuration.cap_generate_name, "w") as fp:
+            json.dump(final_dict, fp, indent=4)
+
+        Configuration.cap_dict = final_dict
+
+    @staticmethod
     def initialize():
         # Establish database connection
         Configuration.database_conection()
 
+    @staticmethod
+    def preinitialize(server):
+        Configuration.logger = server.log
+
         # Read rule data
         Configuration.read_rules()
 
+        # Read capabilities data
+        Configuration.read_caps()
+
         # Check if handshake folder exists
         if not os.path.isdir(Configuration.save_file_location):
-            Configuration.logger.info("Creating handshake folder hierarchy '%s'" % Configuration.save_file_location)
+            Configuration.logger.debug("Creating handshake folder hierarchy '%s'" % Configuration.save_file_location)
             os.makedirs(Configuration.save_file_location)
 
         # Make sure the pot_path is empty

@@ -59,6 +59,9 @@ def require_key(f):
         api_key = request.form.get("apikey", None)
 
         if api_key is None:
+            api_key = request.json.get("apikey")
+
+        if api_key is None:
             return jsonify({"success": False, "reason": "Api key missing!"})
 
         try:
@@ -236,10 +239,10 @@ def getwork_v1(**kwargs):
         return jsonify({"success": False, "reason": "This API key already has work reserved. "
                                                     "Resume or cancel current job."})
 
-    capabilities = request.form.getlist("capabilities", None)
-
-    if capabilities is None:
+    if request.form.get("capabilities", None) is None:
         return jsonify({"success": False, "reason": "Capabilities were not sent!"})
+
+    capabilities = request.form.getlist("capabilities", None)
 
     work, error = Scheduler.get_next_handshake(kwargs["apikey"], capabilities)
     if error != "":
@@ -253,7 +256,9 @@ def file_ok(filename, apikey):
         Configuration.logger.warning("API key '%s' is trying to traverse!" % apikey)
         return False
 
-    if filename is None or filename == "" or filename not in Configuration.api_file_names:
+    if filename is None or filename == "" or filename not in Configuration.cap_dict:
+        if filename not in Configuration.cap_dict:
+            Configuration.logger.warning("Api key '%s' requested illegal file" % filename)
         return False
 
     return True
@@ -265,10 +270,14 @@ def file_ok(filename, apikey):
 def getfile_v1(**kwargs):
     filename = request.form.get("file", None)
 
-    if file_ok(filename, kwargs["apikey"]):
+    if not file_ok(filename, kwargs["apikey"]):
         return ""
 
-    return send_from_directory(os.path.join(Configuration.application.static_folder, "crack"), filename)
+    # File does not exist in system at this moment
+    if Configuration.cap_dict[filename]["last_change"] is None:
+        return ""
+
+    return send_from_directory(os.path.join(Configuration.static_folder, "crack"), filename)
 
 
 @api_api.route('/api/v1/checkfile', methods=['POST'])
@@ -277,45 +286,60 @@ def getfile_v1(**kwargs):
 def checkfile_v1(**kwargs):
     filename = request.form.get("file", None)
 
-    if file_ok(filename, kwargs["apikey"]):
-        return jsonify({"success": True})
+    if not file_ok(filename, kwargs["apikey"]):
+        return jsonify({"success": False, "reason": "File key missing!"})
 
-    return jsonify({"success": False, "reason": "File key missing!"})
+    # File does not exist in system at this moment
+    if Configuration.cap_dict[filename]["last_change"] is None:
+        return jsonify({"success": False, "reason": "Resource temporarily not available"})
+
+    return jsonify({"success": True})
 
 
 @api_api.route('/api/v1/getmissing', methods=['POST'])
 @exception_catcher
 @require_key
 def getmissing_v1(**_):
-    capabilities = request.form.getlist("capabilities", None)
+    client_capabilities = request.json.get("capabilities")
 
-    if capabilities is None:
+    if client_capabilities is None:
         return jsonify({"success": False, "reason": "Capabilities were not sent!"})
 
     rule_reqs = set()
     response = []
+
+    import pprint
+    pprint.pprint(client_capabilities)
+
     for rule in Configuration.get_active_rules():
         for req in rule["reqs"]:
-            if req not in capabilities and req not in rule_reqs:
+            if req in client_capabilities:
+                # Check if sha1 hashes differ
+                if req != "hashcat" and req != "john" and \
+                        client_capabilities[req] != Configuration.cap_dict[req]["sha1"]:
+                    entry = {"type": Configuration.cap_dict["req"]["type"],
+                             "path": Configuration.cap_dict["req"]["path"]}
+                    response.append(entry)
+                    print("sha1 hash does not match for req '%s' client has '%s', we have '%s'" %
+                          (req, client_capabilities[req], Configuration.cap_dict[req]["sha1"]))
+                    continue
+
+            if req not in client_capabilities and req not in rule_reqs:
                 rule_reqs.add(req)
                 entry = {"type": "file"}
 
                 if req == "hashcat" or req == "john":
                     entry["type"] = "program"
                     entry["name"] = req
-                elif req == "johnrules":
-                    entry["path"] = "maskfiles/john.rules"
-                elif rule["type"] == "john":
-                    entry["path"] = rule["baselist"]
-                elif rule["type"] == "wordlist":
-                    entry["path"] = rule["wordlist"]
-                elif rule["type"] == "generated":
-                    entry["path"] = rule["command"].split()[0]
-                elif rule["type"] == "filemask_hashcat":
-                    entry["path"] = rule["filemask_path"]
                 else:
-                    Configuration.logger.error("Unknown type of rule '%s'" % rule["type"])
-                    return jsonify({"success": False, "reason": "Rule requirement error!"})
+                    capability = Configuration.cap_dict.get(req)
+                    if capability is None:
+                        Configuration.logger.error("Unknown rule '%s'" % req)
+                        return jsonify({"success": False, "reason": "Rule requirement error!"})
+
+                    entry["path"] = capability["path"]
+                    entry["type"] = capability["type"]
+
                 response.append(entry)
 
     return jsonify({"success": True, "data": response})

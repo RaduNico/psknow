@@ -165,11 +165,9 @@ class Scheduler:
 
             # Check if the client can run this rule based on capabilities
             rule = Configuration.rule_dict[entry["next_rule"]]
-            Configuration.logger.fatal("")
-            Configuration.logger.fatal("capabilities %s, rule_reqs %s" % (capabilities, rule["reqs"]))
+
             for requirement in rule["reqs"]:
                 if requirement not in capabilities:
-                    Configuration.logger.fatal("lacks '%s' capability" % requirement)
                     not_good = True
                     break
             if not_good:
@@ -230,7 +228,7 @@ class Scheduler:
         task["rule"]["name"] = next_rule["name"]
 
         mapper = {"wordlist": next_rule.get("wordlist", None),
-                  "john": next_rule.get("rule", None),
+                  "john": {"rule": next_rule.get("rule", None), "baselist": next_rule.get("baselist", None)},
                   "generated": next_rule.get("command", None),
                   "mask_hashcat": next_rule.get("mask_hashcat", None),
                   "filemask_hashcat": next_rule.get("filemask_path", None)}
