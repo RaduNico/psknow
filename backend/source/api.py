@@ -315,12 +315,13 @@ def getmissing_v1(**_):
 
     for rule in Configuration.get_active_rules():
         for req in rule["reqs"]:
-            if req in client_capabilities:
-                # Check if sha1 hashes differ
+            if req in client_capabilities and req not in rule_reqs:
+                rule_reqs.add(req)
                 if req not in Configuration.programs and \
                         client_capabilities[req] != Configuration.cap_dict[req]["sha1"]:
-                    entry = {"type": Configuration.cap_dict["req"]["type"],
-                             "path": Configuration.cap_dict["req"]["path"]}
+
+                    entry = {"type": Configuration.cap_dict[req]["type"],
+                             "path": Configuration.cap_dict[req]["path"]}
                     response.append(entry)
                     print("sha1 hash does not match for req '%s' client has '%s', we have '%s'" %
                           (req, client_capabilities[req], Configuration.cap_dict[req]["sha1"]))

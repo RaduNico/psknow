@@ -288,7 +288,7 @@ class Configuration(object):
                 with open(file) as fd:
                     json_data = json.load(fd)
             except Exception as e:
-                Configuration.log_fatal("Error trying to load %s data: %s" % (Configuration.cap_template_name, e))
+                Configuration.log_fatal("Error trying to load %s data: %s" % (file, e))
             return json_data
 
         cap_dict = load_data(Configuration.cap_template_name)
