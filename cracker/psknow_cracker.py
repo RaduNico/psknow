@@ -85,16 +85,16 @@ class Cracker:
         # Translate rule type to command
         if rule["type"] == "generated":
             generator = rule["aux_data"]
-            os.chmod(generator.split()[0], stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
         elif rule["type"] == "john":
+            Configuration.logger.critical("teappappasd %s" % rule["aux_data"])
             generator = "%s --min-length=8 --wordlist=%s --rules=%s --stdout" %\
-                        (Configuration.johnpath, rule["aux_data"]["baselist"], rule["aux_data"]["rule"])
+                        (Configuration.john_path, rule["aux_data"]["baselist"], rule["aux_data"]["rule"])
 
         elif rule["type"] == "scrambler":
             scrambler = Scrambler(ssid)
             generator = "%s --min-length=8 --wordlist=%s --rules=Jumbo --stdout" %\
-                        (Configuration.johnpath, scrambler.get_high_value_tempfile())
+                        (Configuration.john_path, scrambler.get_high_value_tempfile())
 
         elif rule["type"] == "wordlist" or rule["type"] == "mask_hashcat" or rule["type"] == "filemask_hashcat":
             pass
@@ -228,15 +228,21 @@ class Cracker:
             Configuration.logger.info("Slow shutdown signal received - shutting down!")
             sys.exit(0)
 
-        # TODO a crash can occur if a new john the ripper rule is introduced between this update and getting more work
         # Before getting more work make sure we are up to date
         Cracker.complete_missing()
 
         # Nothing is running - getting more work
         work = Requester.getwork()
 
+        die(work is True, "An error occured while getting work!")
+
         # No work to be done right now
         if work is None:
+            return
+
+        # Redundant check
+        if work is False:
+            Configuration.dual_print(Configuration.logger.warning, "Capabilities out of date!")
             return
 
         _, Cracker.path_temp_file = mkstemp(prefix="psknow_crack")
@@ -267,13 +273,19 @@ class Cracker:
 
     @staticmethod
     def complete_missing():
+        gather_flag = False
         missings = Requester.getmissing()
+
+        if missings is None:
+            return
 
         for missing in missings:
             if missing["type"] == "program":
                 Configuration.dual_print(Configuration.logger.info, "Please install program '%s'" % missing["name"])
-            elif missing["type"] == "file":
+            elif missing["type"] in ["dict", "maskfile", "generator", "john-local.conf"]:
                 Configuration.dual_print(Configuration.logger.info, "Downloading '%s'..." % missing["path"])
+
+                gather_flag = True
 
                 if "/" in missing["path"]:
                     directory, filename = missing["path"].rsplit('/', 1)
@@ -287,10 +299,13 @@ class Cracker:
                 if Requester.checkfile(filename) is not None and \
                         Requester.getfile(filename, missing["path"]) is not None:
                     Configuration.dual_print(Configuration.logger.info, "Downloaded '%s'" % missing["path"])
+                    if missing["type"] == "generator":
+                        os.chmod(missing["path"], stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
             else:
                 Configuration.dual_print(Configuration.logger.warning, "Unknown missing type '%s'" % missing)
 
-        Configuration.gather_capabilities()
+        if gather_flag:
+            Configuration.gather_capabilities()
 
     @staticmethod
     def resume_work():
@@ -307,11 +322,9 @@ class Cracker:
 
         Cracker.resume_work()
 
-        Requester.getmissing()
-
-        # while True:
-        #     Cracker.crack_existing_handshakes()
-        #     sleep(10)
+        while True:
+            Cracker.crack_existing_handshakes()
+            sleep(10)
 
 
 if __name__ == "__main__":

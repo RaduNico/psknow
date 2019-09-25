@@ -17,12 +17,18 @@ class Requester:
 
         return data.get("data"), ""
 
+    # Send a request for work
+    # Returns:
+    # None if no work can be done
+    # True if an error occured
+    # False if a capability is out of date
+    # work dictionary if successful
     @staticmethod
     def getwork():
         url = Configuration.remote_server + "getwork"
         Configuration.logger.info("Requesting work from '%s'" % url)
         try:
-            response = requests.post(url, data={"apikey": Configuration.apikey,
+            response = requests.post(url, json={"apikey": Configuration.apikey,
                                                 "capabilities": Configuration.capabilities})
         except requests.exceptions.ConnectionError:
             Configuration.dual_print(Configuration.logger.error, "Server is down!")
@@ -30,8 +36,14 @@ class Requester:
 
         data, err = Requester._decode_json(response)
         if err != "":
+            if err == "Capabilities updated!":
+                return False
+
+            if err == "No work can be done with current capabilities":
+                return None
+
             Configuration.dual_print(Configuration.logger.error, "Error retrieving data from server '%s'" % err)
-            return None
+            return True
 
         return data
 
@@ -138,11 +150,7 @@ class Requester:
         if err != "":
             Configuration.dual_print(Configuration.logger.error,
                                      "Error while retrieving missing capabilites '%s'" % err)
-            return None
 
-        import sys, pprint
-        pprint.pprint(data)
-        sys.exit(0)
         return data
 
     @staticmethod
