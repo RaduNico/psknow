@@ -12,6 +12,8 @@ from copy import deepcopy
 
 
 class Scheduler:
+    # prios = [{rule_name: rule_prio}] - priorities only for possible rules
+    # crt = [{tried_rule_name: 1}] - all tried rules for current hs
     mapper_template = "function() {" \
                       " var prios = %s;" \
                       " var result_name = '';" \
@@ -20,10 +22,10 @@ class Scheduler:
                       " for (var iter in this['handshake']['tried_dicts']) {" \
                       " 	crt[this['handshake']['tried_dicts'][iter]] = 1;" \
                       " }" \
-                      " for (var key in prios) {" \
-                      " 	if ( crt[key] !== 1 && prios[key] < result_prio) {" \
-                      " 		result_name = key;" \
-                      " 		result_prio = prios[key];" \
+                      " for (var name in prios) {" \
+                      " 	if ( crt[name] !== 1 && prios[name] < result_prio) {" \
+                      " 		result_name = name;" \
+                      " 		result_prio = prios[name];" \
                       " 	}" \
                       " }" \
                       " var result = {};" \
@@ -155,23 +157,15 @@ class Scheduler:
             return b64encode(fd.read()).decode("utf8")
 
     @staticmethod
-    def _extract_rule_with_parameters(entries, capabilities):
+    def _extract_rule_with_parameters(entries):
         result = None
         hs_prio = 900000
         rule_prio = 900000
         for full_entry in entries:
             entry = full_entry["value"]
-            not_good = False
 
             # Check if the client can run this rule based on capabilities
             rule = Configuration.rule_dict[entry["next_rule"]]
-
-            for requirement in rule["reqs"]:
-                if requirement not in capabilities:
-                    not_good = True
-                    break
-            if not_good:
-                continue
 
             # We have two parameters - the handshake priority which takes precedence and the rule priority
             if hs_prio > entry["priority"]:
@@ -184,6 +178,25 @@ class Scheduler:
         return result
 
     @staticmethod
+    def get_all_possible_rules(client_capabilities):
+        result = {}
+
+        for rule_name in Configuration.rule_priorities.keys():
+            not_good = False
+            rule = Configuration.rule_dict[rule_name]
+
+            for requirement in rule["reqs"]:
+                if requirement not in client_capabilities:
+                    not_good = True
+                    break
+
+            if not_good:
+                continue
+
+            result[rule_name] = rule["priority"]
+        return result
+
+    @staticmethod
     def get_next_handshake(apikey, client_capabilities):
         task = deepcopy(Scheduler.default_task)
 
@@ -192,7 +205,7 @@ class Scheduler:
 
         # Lock this in order to ensure that multiple threads do not reserve the same handshake
         with Configuration.wifis_lock:
-            mapper = Code(Scheduler.mapper_template % Configuration.rule_priorities)
+            mapper = Code(Scheduler.mapper_template % Scheduler.get_all_possible_rules(client_capabilities))
             try:
                 response = Configuration.wifis.map_reduce(mapper, Scheduler.reducer, {"inline": 1}, query=query)
             except Exception as e:
@@ -204,7 +217,7 @@ class Scheduler:
             if len(entries) == 0:
                 return task, "No work to be done at the moment."
 
-            best_handshake = Scheduler._extract_rule_with_parameters(entries, client_capabilities)
+            best_handshake = Scheduler._extract_rule_with_parameters(entries)
 
             if best_handshake is None:
                 return task, "No work can be done with current capabilities"
