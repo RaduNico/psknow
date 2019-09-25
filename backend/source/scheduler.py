@@ -184,7 +184,7 @@ class Scheduler:
         return result
 
     @staticmethod
-    def get_next_handshake(apikey, capabilities):
+    def get_next_handshake(apikey, client_capabilities):
         task = deepcopy(Scheduler.default_task)
 
         query = {"handshake.open": False, "reserved_by": None, "handshake.password": "",
@@ -204,7 +204,7 @@ class Scheduler:
             if len(entries) == 0:
                 return task, "No work to be done at the moment."
 
-            best_handshake = Scheduler._extract_rule_with_parameters(entries, capabilities)
+            best_handshake = Scheduler._extract_rule_with_parameters(entries, client_capabilities)
 
             if best_handshake is None:
                 return task, "No work can be done with current capabilities"
@@ -227,12 +227,10 @@ class Scheduler:
         task["rule"]["type"] = next_rule["type"]
         task["rule"]["name"] = next_rule["name"]
 
-        mapper = {"wordlist": next_rule.get("wordlist", None),
-                  "john": {"rule": next_rule.get("rule", None), "baselist": next_rule.get("baselist", None)},
-                  "generated": next_rule.get("command", None),
-                  "mask_hashcat": next_rule.get("mask_hashcat", None),
-                  "filemask_hashcat": next_rule.get("filemask_path", None)}
-
-        task["rule"]["aux_data"] = mapper[next_rule["type"]]
+        if next_rule["type"] == "john":
+            task["rule"]["aux_data"] = {"rule": next_rule.get("rule", None),
+                                        "baselist": Configuration.cap_dict[next_rule["path"]]["path"]}
+        elif next_rule["path"] != "":
+            task["rule"]["aux_data"] = Configuration.cap_dict[next_rule["path"]]["path"]
 
         return task, ""

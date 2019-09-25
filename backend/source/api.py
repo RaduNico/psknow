@@ -239,12 +239,17 @@ def getwork_v1(**kwargs):
         return jsonify({"success": False, "reason": "This API key already has work reserved. "
                                                     "Resume or cancel current job."})
 
-    if request.form.get("capabilities", None) is None:
+    client_capabilities = request.json.get("capabilities")
+
+    if client_capabilities is None:
         return jsonify({"success": False, "reason": "Capabilities were not sent!"})
 
-    capabilities = request.form.getlist("capabilities", None)
+    # Check if capabilities are up to date. Redundant check
+    for cap_name, cap_hash in client_capabilities.items():
+        if cap_name not in Configuration.programs and Configuration.cap_dict[cap_name]["sha1"] != cap_hash:
+            return jsonify({"success": False, "reason": "Capabilities updated!"})
 
-    work, error = Scheduler.get_next_handshake(kwargs["apikey"], capabilities)
+    work, error = Scheduler.get_next_handshake(kwargs["apikey"], client_capabilities)
     if error != "":
         return jsonify({"success": False, "reason": error})
 
@@ -308,14 +313,11 @@ def getmissing_v1(**_):
     rule_reqs = set()
     response = []
 
-    import pprint
-    pprint.pprint(client_capabilities)
-
     for rule in Configuration.get_active_rules():
         for req in rule["reqs"]:
             if req in client_capabilities:
                 # Check if sha1 hashes differ
-                if req != "hashcat" and req != "john" and \
+                if req not in Configuration.programs and \
                         client_capabilities[req] != Configuration.cap_dict[req]["sha1"]:
                     entry = {"type": Configuration.cap_dict["req"]["type"],
                              "path": Configuration.cap_dict["req"]["path"]}
@@ -328,7 +330,7 @@ def getmissing_v1(**_):
                 rule_reqs.add(req)
                 entry = {"type": "file"}
 
-                if req == "hashcat" or req == "john":
+                if req in Configuration.programs:
                     entry["type"] = "program"
                     entry["name"] = req
                 else:

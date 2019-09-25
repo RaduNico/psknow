@@ -100,6 +100,7 @@ class Configuration(object):
     rule_priorities = {}
     wifis_lock = Lock()
     rule_dict = {}
+    programs = ["hashcat", "john"]
 
     cap_template_name = "config_files/capabilities_template"
     cap_generate_name = "config_files/capabilities_generated"
