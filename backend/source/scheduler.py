@@ -38,28 +38,39 @@ class Scheduler:
                       " result['mac'] = this['handshake']['MAC'];" \
                       " result['ssid'] = this['handshake']['SSID'];" \
                       " result['next_rule'] = result_name;" \
+                      " result['rule_prio'] = result_prio;" \
                       " result['handshake_type'] = this['handshake']['handshake_type'];" \
-                      " emit(result_prio, result)" \
+                      " emit(0, result)" \
                       "}"
 
-    reducer = Code("function (rule_prio, documents) {"
-                   "	var good_document = documents[0];"
-                   "	var best_user_prio = documents[0]['priority'];"
-                   "	var best_date = documents[0]['date_added'];"
-                   "	for (var i = 1; i < documents.length; i++) {"
-                   "		if (documents[i]['priority'] < best_user_prio) {"
-                   "			best_user_prio = documents[i]['priority'];"
-                   "			"
-                   "			good_document = documents[i];"
-                   "			best_date = documents[i]['date_added'];"
-                   "		} else if (documents[i]['priority'] === "
-                   "best_user_prio && documents[i]['date_added'] < best_date) {"
-                   "			good_document = documents[i];"
-                   "			best_date = documents[i]['date_added'];"
-                   "		}"
-                   "	}"
-                   "	return good_document;"
-                   "}")
+    reducerf = Code("function (rule_prio, documents) {"
+                    "	var good_document = documents[0];"
+                    "	var best_user_prio = documents[0]['priority'];"
+                    "	var best_date = documents[0]['date_added'];"
+                    "	var best_rule_prio = documents[0]['rule_prio'];"
+                    "	"
+                    "	for (var i = 1; i < documents.length; i++) {"
+                    "		if (documents[i]['priority'] < best_user_prio) {"
+                    "			good_document = documents[i];"
+                    "			"
+                    "			best_user_prio = documents[i]['priority'];"
+                    "			best_rule_prio = documents[i]['rule_prio'];"
+                    "			best_date = documents[i]['date_added'];"
+                    "		} else if (documents[i]['priority'] === best_user_prio &&"
+                    "					documents[i]['rule_prio'] < best_rule_prio) {"
+                    "			good_document = documents[i];"
+                    "			"
+                    "			best_rule_prio = documents[i]['rule_prio'];"
+                    "			best_date = documents[i]['date_added'];"
+                    "		} else if (documents[i]['priority'] === best_user_prio &&"
+                    "					documents[i]['rule_prio'] === best_rule_prio &&"
+                    "					documents[i]['date_added'] < best_date) {"
+                    "			good_document = documents[i];"
+                    "			best_date = documents[i]['date_added'];"
+                    "		}"
+                    "	}"
+                    "	return good_document;"
+                    "}")
 
     default_task = {
         "handshake": {
@@ -157,27 +168,6 @@ class Scheduler:
             return b64encode(fd.read()).decode("utf8")
 
     @staticmethod
-    def _extract_rule_with_parameters(entries):
-        result = None
-        hs_prio = 900000
-        rule_prio = 900000
-        for full_entry in entries:
-            entry = full_entry["value"]
-
-            # Check if the client can run this rule based on capabilities
-            rule = Configuration.rule_dict[entry["next_rule"]]
-
-            # We have two parameters - the handshake priority which takes precedence and the rule priority
-            if hs_prio > entry["priority"]:
-                result = entry
-                rule_prio = rule["priority"]
-                hs_prio = entry["priority"]
-            elif hs_prio == entry["priority"] and rule_prio > rule["priority"]:
-                rule_prio = rule["priority"]
-                result = entry
-        return result
-
-    @staticmethod
     def get_all_possible_rules(client_capabilities):
         result = {}
 
@@ -207,20 +197,15 @@ class Scheduler:
         with Configuration.wifis_lock:
             mapper = Code(Scheduler.mapper_template % Scheduler.get_all_possible_rules(client_capabilities))
             try:
-                response = Configuration.wifis.map_reduce(mapper, Scheduler.reducer, {"inline": 1}, query=query)
+                response = Configuration.wifis.map_reduce(mapper, Scheduler.reducerf, {"inline": 1}, query=query)
             except Exception as e:
                 Configuration.logger.error("Error occured while doing the mapreduce: %s" % e)
                 return None, "Internal server error 101"
 
-            entries = response["results"]
-
-            if len(entries) == 0:
+            if len(response["results"]) == 0:
                 return task, "No work to be done at the moment."
 
-            best_handshake = Scheduler._extract_rule_with_parameters(entries)
-
-            if best_handshake is None:
-                return task, "No work can be done with current capabilities"
+            best_handshake = response["results"][0]["value"]
 
             Scheduler._reserve_handshake(best_handshake["id"], apikey, best_handshake["next_rule"])
 
