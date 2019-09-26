@@ -245,8 +245,12 @@ class Configuration(object):
 
     @staticmethod
     def sha1file(filepath):
-        with open(filepath, 'rb') as f:
-            return hashlib.sha1(f.read()).hexdigest()
+        with open(filepath, "rb") as f:
+            hash_sha1 = hashlib.sha1()
+            for chunk in iter(lambda: f.read(2 ** 20), b""):
+                hash_sha1.update(chunk)
+
+        return hash_sha1.hexdigest()
 
     @staticmethod
     def get_mtime_for_cap_file(path):
