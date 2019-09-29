@@ -94,6 +94,7 @@ def has_job(f):
             return jsonify({"success": False, "reason": error})
 
         if data is None:
+            # NOTE this message is checked in requester
             return jsonify({"success": False, "reason": "No running job on this API key."})
 
         kwargs["job"] = data
@@ -247,6 +248,7 @@ def getwork_v1(**kwargs):
     # Check if capabilities are up to date. Redundant check
     for cap_name, cap_hash in client_capabilities.items():
         if cap_name not in Configuration.programs and Configuration.cap_dict[cap_name]["sha1"] != cap_hash:
+            # NOTE this message is checked in requester
             return jsonify({"success": False, "reason": "Capabilities updated!"})
 
     work, error = Scheduler.get_next_handshake(kwargs["apikey"], client_capabilities)
@@ -468,12 +470,11 @@ def not_cracked(f):
             kwargs["password"] = password
             return f(*args, **kwargs)
 
-        updated = dict()
-        updated["handshake.tried_dicts"].append(kwargs["job"]["reserved"]["tried_rule"])
-        updated["handshake.active"] = False
-        updated["reserved"] = None
+        handshake = kwargs["job"]["handshake"]
+        handshake["active"] = False
+        handshake["tried_dicts"].append(kwargs["job"]["reserved"]["tried_rule"])
 
-        if update_hs_id(kwargs["job"]["id"], updated):
+        if update_hs_id(kwargs["job"]["id"], {"handshake": handshake, "reserved": None}):
             return jsonify({"success": False, "reason": "Error updating database."})
 
         return jsonify({"success": True})
@@ -487,6 +488,8 @@ def not_cracked(f):
 @not_cracked
 def sendresult_v1(**kwargs):
     password = kwargs["password"]
+    if password.startswith("$HEX[") and password.endswith("]"):
+        password = bytes.fromhex(password[5:-1]).decode('utf-8')
 
     if len(password) < 8 or len(password) > 63:
         return jsonify({"success": False, "reason": "Invalid password length."})

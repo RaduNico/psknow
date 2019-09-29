@@ -203,6 +203,7 @@ class Scheduler:
                 return None, "Internal server error 101"
 
             if len(response["results"]) == 0:
+                # NOTE this message is checked in requester
                 return task, "No work to be done at the moment."
 
             best_handshake = response["results"][0]["value"]

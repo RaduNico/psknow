@@ -37,7 +37,6 @@ def get_unique_filename_path(raw_filename):
     full_path = os.path.join(Configuration.save_file_location, orig_fname)
     number = 0
     position = orig_fname.rfind('.')
-    new_filename = orig_fname
     while True:
         try:
             os.close(os.open(full_path, os.O_EXCL | os.O_CREAT, 0o644))
@@ -47,7 +46,7 @@ def get_unique_filename_path(raw_filename):
             new_filename = orig_fname[:position] + "_" + str(number).rjust(4, '0') + orig_fname[position:]
             full_path = os.path.join(Configuration.save_file_location, new_filename)
 
-    return new_filename, full_path
+    return full_path
 
 
 def get_unique_id():
@@ -301,14 +300,13 @@ def check_handshake(file_path, filename, wifi_entry):
 
                 handshake = deepcopy(Configuration.default_handshake)
                 handshake["MAC"] = mac
+
+                handshake["SSID"] = cracker_obj.group(2)
                 if hs_type == "PMKID":
                     handshake["SSID"] = bytearray.fromhex(cracker_obj.group(2)).decode()
-                    if handshake["SSID"].startswith("$HEX[") and handshake["SSID"].endswith("]"):
-                        handshake["SSID"] = handshake["SSID"][5:-1].decode("hex")
-                else:
-                    handshake["SSID"] = cracker_obj.group(2)
 
-                Configuration.logger.warning("Doing %s" % handshake["SSID"])
+                if handshake["SSID"].startswith("$HEX[") and handshake["SSID"].endswith("]"):
+                    handshake["SSID"] = bytes.fromhex(handshake["SSID"][5:-1]).decode('utf-8')
 
                 handshake["handshake_type"] = hs_type
 
@@ -384,7 +382,7 @@ def upload_file():
         file.save(tmp_path)
 
         # Generate a unique filename to permanently save file
-        new_filename, file_path = get_unique_filename_path(file.filename)
+        file_path = get_unique_filename_path(file.filename)
 
         new_entry = deepcopy(Configuration.default_wifi)
 
@@ -393,7 +391,7 @@ def upload_file():
         # new_entry["location"]["keyword"] = #TODO POST keyword
         # new_entry["location"]["coordinates"] = #TODO POST coordinates
 
-        new_entry["path"] = new_filename
+        new_entry["path"] = file_path
         new_entry["users"] = [current_user.get_id()]
         new_entry["priority"] = 0
 
