@@ -1,0 +1,77 @@
+{
+    "wordlist-top4800-probable.txt": {
+		"type": "dict",
+		"path": "dict/wordlist-top4800-probable.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"dic_lc_rom.txt": {
+		"type": "dict",
+		"path": "dict/dic_lc_rom.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"nume_bac2018.txt": {
+		"type": "dict",
+		"path": "dict/nume_bac2018.txt",
+		"sha1": "",
+		"last_change": null
+    },
+   	"dic_lc_eng.txt": {
+		"type": "dict",
+		"path": "dict/dic_lc_eng.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"nume_comune_bac2018.txt": {
+		"type": "dict",
+		"path": "dict/nume_comune_bac2018.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"top_2500_engl.txt": {
+		"type": "dict",
+		"path": "dict/top_2500_engl.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"top_10mil_hibp.txt": {
+		"type": "dict",
+		"path": "dict/top_10mil_hibp.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"top_10-100mil_hibp.txt": {
+		"type": "dict",
+		"path": "dict/top_10-100mil_hibp.txt",
+		"sha1": "",
+		"last_change": null
+	},
+	"rest_hibp.txt": {
+		"type": "dict",
+		"path": "dict/rest_hibp.txt",
+		"sha1": "",
+		"last_change": null
+	},
+
+	"date_generator.py": {
+		"type": "generator",
+		"path": "dict/generators/date_generator.py",
+		"sha1": "",
+		"last_change": null
+	},
+
+	"three_years.hcmask": {
+		"type": "maskfile",
+		"path": "dict/maskfiles/three_years.hcmask",
+		"sha1": "",
+		"last_change": null
+	},
+
+	"john-local.conf": {
+		"type": "john-local.conf",
+		"path": "john-local.conf",
+		"sha1": "",
+		"last_change": null
+	}
+}

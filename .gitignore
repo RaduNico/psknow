@@ -9,6 +9,7 @@ cracker/dict
 cracker/john-local.conf
 
 backend/config_files/capabilities_*
+!backend/config_files/capabilities_template
 backend/static/crack/*.txt
 
 backend/secret_key
