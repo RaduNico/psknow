@@ -10,5 +10,5 @@ except FileNotFoundError:
     application.secret_key = token_urlsafe(90)
     with open("secret_key", "w") as sc_fd:
         sc_fd.write(application.secret_key)
-application.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+application.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 Configuration.initialize()

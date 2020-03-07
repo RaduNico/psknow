@@ -621,7 +621,7 @@ def upload_file():
             new_entry["handshakes"] = extra_info["handshakes"]
             new_entry["file_type"] = extra_info["file_type"]
             new_entry["user"] = current_user.get_id()
-            new_entry["priority"] = -5
+            new_entry["priority"] = 0
 
             # Save received file
             try:
