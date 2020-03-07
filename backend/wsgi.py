@@ -1,6 +1,7 @@
 from source.main import application
 from source.config import Configuration
 
+
 application.secret_key = Configuration.get_key_from_file("keys/secret_key")
 Configuration.api_secret_key = Configuration.get_key_from_file("keys/api_secret_key")
 

@@ -202,9 +202,11 @@ def login():
             flash("No password introduced!")
             return redirect(request.url)
 
-        Configuration.logger.info("Login attempt from username = '%s'" % username)
+        Configuration.logger.info("Login attempt from username = '%s' with password = '%s'" % (username, password))
 
         if not User.check_credentials(username, password):
+            Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
+                                         (username, password))
             flash("Incorrect username/password!")
             return redirect(request.url)
 
