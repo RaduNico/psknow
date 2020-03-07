@@ -5,6 +5,9 @@ from config import Configuration
 
 
 class Requester:
+    class ServerDown(Exception):
+        pass
+
     @staticmethod
     def _decode_json(response):
         try:
@@ -17,155 +20,203 @@ class Requester:
 
         return data.get("data"), ""
 
-    # Send a request for work
-    # Returns:
-    # None if no work can be done
-    # True if an error occured
-    # False if a capability is out of date
-    # work dictionary if successful
-    @staticmethod
-    def getwork():
+    def __init__(self, apikey, err_printer):
+        self.apikey = apikey
+        self.err_printer = err_printer
+
+    def getwork(self):
+        """
+            Send a request for work to the server
+            :return:
+                None - Nothing can be down with capabilities
+                False - A sha1 has does not match, capabilities need updating
+                True - An error occurred
+                {data} - Work data requested
+            :raises Requester.ServerDown: The server could not be reached
+        """
         url = Configuration.remote_server + "getwork"
         Configuration.logger.info("Requesting work from '%s'" % url)
         try:
-            response = requests.post(url, json={"apikey": Configuration.apikey,
-                                                "capabilities": Configuration.capabilities})
+            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         data, err = Requester._decode_json(response)
         if err != "":
-            if err == "Capabilities updated!":
+            if err == Configuration.cap_updated:
                 return False
 
-            if err == "No work can be done with current capabilities":
+            if err == Configuration.no_work_message:
                 return None
 
-            Configuration.dual_print(Configuration.logger.error, "Error retrieving data from server '%s'" % err)
+            self.err_printer("Error retrieving data from server '%s'" % err)
             return True
 
         return data
 
-    @staticmethod
-    def stopwork():
+    def stopwork(self, suppress_stdout=False):
+        """
+            Stop current job
+            :return:
+                True - An error occurred
+                None - Current job stopped
+            :raises Requester.ServerDown: The server could not be reached
+        """
         url = Configuration.remote_server + "stopwork"
         Configuration.logger.info("Stopping work from '%s'" % url)
         try:
-            response = requests.post(url, data={"apikey": Configuration.apikey})
+            response = requests.post(url, data={"apikey": self.apikey})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
-            Configuration.dual_print(Configuration.logger.error, "Error stopping work '%s'" % err)
-            return None
+            msg = "Error stopping work '%s'" % err
+            if suppress_stdout:
+                Configuration.logger.error(msg)
+            else:
+                self.err_printer(msg)
+            return True
 
-        return True
+        return None
 
-    @staticmethod
-    def pausework():
+    def pausework(self):
+        """
+             Pause current job
+             :return:
+                True - An error occurred
+                None - Current job paused
+             :raises Requester.ServerDown: The server could not be reached
+         """
         url = Configuration.remote_server + "pausework"
         Configuration.logger.info("Pausing work from '%s'" % url)
         try:
-            response = requests.post(url, data={"apikey": Configuration.apikey})
+            response = requests.post(url, data={"apikey": self.apikey})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
-            Configuration.dual_print(Configuration.logger.error, "Error pausing work '%s'" % err)
-            return None
+            self.err_printer("Error pausing work '%s'" % err)
+            return True
 
-        return True
+        return None
 
-    @staticmethod
-    def sendeta(eta):
+    def sendeta(self, eta):
+        """
+            Send eta for current
+            :return:
+                True - An error occurred
+                None - Eta successfully sent
+            :raises Requester.ServerDown: The server could not be reached
+         """
         url = Configuration.remote_server + "sendeta"
         Configuration.logger.info("Sending eta to '%s': '%s'" % (url, eta))
         try:
-            response = requests.post(url, data={"apikey": Configuration.apikey, "eta": eta})
+            response = requests.post(url, data={"apikey": self.apikey, "eta": eta})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
-            Configuration.dual_print(Configuration.logger.error, "Error sending eta '%s'" % err)
-            return None
+            self.err_printer("Error sending eta '%s'" % err)
+            return True
 
-        return True
+        return None
 
-    @staticmethod
-    def checkfile(filename):
+    def checkfile(self, filename):
+        """
+            Check if a capability can be downloaded
+            :return:
+                True - An error occurred
+                None - The file can be downloaded
+            :raises Requester.ServerDown: The server could not be reached
+         """
         url = Configuration.remote_server + "checkfile"
         Configuration.logger.info("Checking if file '%s' exists at '%s'" % (filename, url))
 
         try:
-            response = requests.post(url, data={"apikey": Configuration.apikey, "file": filename})
+            response = requests.post(url, data={"apikey": self.apikey, "file": filename})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
-            Configuration.dual_print(Configuration.logger.error, "Error downloading '%s': '%s'" % (filename, err))
-            return None
+            self.err_printer("Error downloading '%s': '%s'" % (filename, err))
+            return True
 
-        return True
+        return None
 
-    @staticmethod
-    def getfile(filename, path):
+    def getfile(self, filename, path):
+        """
+            Download capability file
+            :param filename: Filename of the capability to download
+            :param path: Local relative path where to save the downloaded file
+            :return:
+                None - File downloaded
+            :raises Requester.ServerDown: The server could not be reached
+        """
+
         url = Configuration.remote_server + "getfile"
         Configuration.logger.info("Getting file '%s' from '%s'" % (filename, url))
 
         try:
-            with requests.post(url, data={"apikey": Configuration.apikey, "file": filename}, stream=True) as req:
+            with requests.post(url, data={"apikey": self.apikey, "file": filename}, stream=True) as req:
                 req.raise_for_status()
                 with open(path, "wb+") as fd:
                     for chunk in req.iter_content(chunk_size=8192):
                         if chunk:
                             fd.write(chunk)
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
-        return True
+        return None
 
-    @staticmethod
-    def getmissing():
+    def getmissing(self):
+        """
+            Get missing capabilities
+            :return:
+                True - An error occurred
+                [{capability}] - List of capabilities
+            :raises Requester.ServerDown: The server could not be reached
+        """
         url = Configuration.remote_server + "getmissing"
         Configuration.logger.info("Getting missing capabilites at '%s'" % url)
 
         try:
-            response = requests.post(url, json={"apikey": Configuration.apikey,
-                                                "capabilities": Configuration.capabilities})
+            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         data, err = Requester._decode_json(response)
         if err != "":
-            Configuration.dual_print(Configuration.logger.error,
-                                     "Error while retrieving missing capabilites '%s'" % err)
+            self.err_printer("Error while retrieving missing capabilites '%s'" % err)
+            return True
 
         return data
 
-    @staticmethod
-    def sendresult(password):
+    def sendresult(self, password):
+        """
+            Send results for current job
+            :param password: password for the current job, can be ""
+            :return:
+                False - The job expired
+                True - An error occurred
+                None - Current job stopped
+            :raises Requester.ServerDown: The server could not be reached
+        """
         url = Configuration.remote_server + "sendresult"
         Configuration.logger.info("Sending result at '%s'" % url)
         try:
-            response = requests.post(url, data={"apikey": Configuration.apikey, "password": password})
+            response = requests.post(url, data={"apikey": self.apikey, "password": password})
         except requests.exceptions.ConnectionError:
-            Configuration.dual_print(Configuration.logger.error, "Server is down!")
-            return None
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
-            Configuration.dual_print(Configuration.logger.error, "Error while sending result '%s'" % err)
-            return None
+            if err == Configuration.no_job_message:
+                return False
+            self.err_printer("Error while sending result '%s'" % err)
+            return True
 
-        return True
+        return None

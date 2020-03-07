@@ -15,7 +15,7 @@ class Configuration(object):
 
     # Remote location info
     # remote_server = "https://pandorak.go.ro/api/v1/"
-    remote_server = "http://192.168.14.103:9645/api/v1/"
+    remote_server = "http://127.0.0.1:9645/api/v1/"
     capabilities = []
     capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
     programs = ["hashcat", "john"]
@@ -28,6 +28,7 @@ class Configuration(object):
 
     old_sha1s = None
     sha1s_filename = "crack/sha1s.txt"
+    save_result_filename = "crack/saveresult.txt"
 
     default_hashcat_dict = {"progress": -1, "eta": "", "speed": ""}
 
@@ -36,7 +37,7 @@ class Configuration(object):
     hashcat_potfile_path = os.path.join(attack_path, 'hashcat.pot')
 
     # Cracking regexes
-    hashcat_left_regex = re.compile("[0-9a-f]*[:*][0-9a-f]*[:*](.*)[:*](.*)[\n]?$")
+    hashcat_show_regex = re.compile("[0-9a-f]*[:*][0-9a-f]{12}[:*][0-9a-f]{12}[:*].*[:*](.*)[\n]?$")
     atoi_regex = re.compile(" *[-]?[0-9]*")
 
     hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]*)$")
@@ -45,6 +46,11 @@ class Configuration(object):
 
     # Cracking variables
     hot_words = ["parola", "password", "wifi"]  # TODO get those from server
+
+    # Requester messages
+    no_work_message = "No work to be done at the moment."
+    no_job_message = "No running job on this API key."
+    cap_updated = "Capabilities updated!"
 
     @staticmethod
     def dual_print(log, message):
@@ -74,7 +80,7 @@ class Configuration(object):
         sha1_file_changed = False
 
         if os.path.isfile("john-local.conf") and Configuration.check_file("john-local.conf", "john-local.conf"):
-                sha1_file_changed = True
+            sha1_file_changed = True
 
         for directory in Configuration.capab_dirs:
             if not os.path.isdir(directory):
@@ -127,8 +133,12 @@ class Configuration(object):
 
     @staticmethod
     def sha1file(filepath):
-        with open(filepath, 'rb') as f:
-            return hashlib.sha1(f.read()).hexdigest()
+        with open(filepath, "rb") as f:
+            hash_sha1 = hashlib.sha1()
+            for chunk in iter(lambda: f.read(2 ** 20), b""):
+                hash_sha1.update(chunk)
+
+        return hash_sha1.hexdigest()
 
     @staticmethod
     def initialize():
