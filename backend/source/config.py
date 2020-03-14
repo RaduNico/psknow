@@ -20,6 +20,7 @@ class Configuration(object):
     database_name = "psknow"
 
     # TODO move this in a private file
+    login_with_credentials = False
     db_username = 'psknow'
     db_password = 'xY6R0YPFBpjebMwFHBYXQTokZ25nI1G8eZfjWqQrUtUeajcucgKpNxncVBCW'
 
@@ -204,9 +205,13 @@ class Configuration(object):
     @staticmethod
     def database_conection():
         try:
-            conn_loc = "mongodb://%s:%s@%s/%s" %\
-                       (Configuration.db_username, Configuration.db_password,
-                        Configuration.database_location, Configuration.database_name)
+            if Configuration.login_with_credentials:
+                conn_loc = "mongodb://%s:%s@%s/%s" %\
+                           (Configuration.db_username, Configuration.db_password,
+                            Configuration.database_location, Configuration.database_name)
+            else:
+                conn_loc = "mongodb://%s/%s" %\
+                           (Configuration.database_location, Configuration.database_name)
             Configuration.logger.debug("Connecting at %s" % conn_loc)
 
             Configuration.conn = MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
