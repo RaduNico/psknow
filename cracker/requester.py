@@ -2,6 +2,7 @@ import requests
 import traceback
 
 from config import Configuration
+from comunicator import Comunicator
 
 
 class Requester:
@@ -37,9 +38,14 @@ class Requester:
         url = Configuration.remote_server + "getwork"
         Configuration.logger.info("Requesting work from '%s'" % url)
         try:
-            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities})
+            response = requests.post(url, json = {"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
+
+            
+
 
         data, err = Requester._decode_json(response)
         if err != "":
@@ -65,9 +71,11 @@ class Requester:
         url = Configuration.remote_server + "stopwork"
         Configuration.logger.info("Stopping work from '%s'" % url)
         try:
-            response = requests.post(url, data={"apikey": self.apikey})
+            response = requests.post(url, data={"apikey": self.apikey}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -113,9 +121,12 @@ class Requester:
         url = Configuration.remote_server + "sendeta"
         Configuration.logger.info("Sending eta to '%s': '%s'" % (url, eta))
         try:
-            response = requests.post(url, data={"apikey": self.apikey, "eta": eta})
+            response = requests.post(url, data={"apikey": self.apikey, "eta": eta}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
+
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -136,9 +147,12 @@ class Requester:
         Configuration.logger.info("Checking if file '%s' exists at '%s'" % (filename, url))
 
         try:
-            response = requests.post(url, data={"apikey": self.apikey, "file": filename})
+            response = requests.post(url, data={"apikey": self.apikey, "file": filename}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
+
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -161,7 +175,7 @@ class Requester:
         Configuration.logger.info("Getting file '%s' from '%s'" % (filename, url))
 
         try:
-            with requests.post(url, data={"apikey": self.apikey, "file": filename}, stream=True) as req:
+            with requests.post(url, data={"apikey": self.apikey, "file": filename}, stream=True, timeout = 10) as req:
                 req.raise_for_status()
                 with open(path, "wb+") as fd:
                     for chunk in req.iter_content(chunk_size=8192):
@@ -169,6 +183,9 @@ class Requester:
                             fd.write(chunk)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
+
 
         return None
 
@@ -184,9 +201,12 @@ class Requester:
         Configuration.logger.info("Getting missing capabilites at '%s'" % url)
 
         try:
-            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities})
+            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
+
 
         data, err = Requester._decode_json(response)
         if err != "":
@@ -208,9 +228,12 @@ class Requester:
         url = Configuration.remote_server + "sendresult"
         Configuration.logger.info("Sending result at '%s'" % url)
         try:
-            response = requests.post(url, data={"apikey": self.apikey, "password": password})
+            response = requests.post(url, data={"apikey": self.apikey, "password": password}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
+        except requests.exceptions.Timeout:
+            Configuration.log_fatal("Backend is unresponsive")
+        
 
         _, err = Requester._decode_json(response)
         if err != "":

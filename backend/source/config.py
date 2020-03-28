@@ -82,7 +82,7 @@ class Configuration(object):
 
     empty_pot_path = 'config_files/empty_potfile'
 
-    # Accepted uplaod extensions
+    # Accepted upload extensions
     accepted_extensions = {"cap", "pcap", "16800", "pcapng"}
 
     # Dictionaries allowed for download
@@ -282,6 +282,7 @@ class Configuration(object):
         if base_cap_dict["last_change"] is None or\
                 (base_cap_dict["last_change"] is not None and last_mod > base_cap_dict["last_change"]):
             new_cap_dict["last_change"] = last_mod
+            print("STARTING HASHING")
             new_cap_dict["sha1"] = Configuration.sha1file(path)
 
         if new_cap_dict["sha1"] == "":
