@@ -62,8 +62,6 @@ class Process:
             command = command.split(' ')
 
         self.command = command
-        self.out = ''
-        self.err = ''
 
         Configuration.logger.info('Executing:%s' % ' '.join(command))
 
@@ -71,6 +69,8 @@ class Process:
 
         self.out = None
         self.err = None
+        self.raw_out = None
+        self.raw_err = None
         if devnull:
             sout = Process.devnull()
             serr = Process.devnull()
@@ -92,6 +92,14 @@ class Process:
                 self.interrupt()
         except AttributeError:
             pass
+
+    def raw_stdout(self):
+        self.get_output()
+        return self.raw_out
+
+    def raw_stderr(self):
+        self.get_output()
+        return self.raw_err
 
     def stdout(self):
         ''' Waits for process to finish, returns stdout output '''
@@ -122,18 +130,24 @@ class Process:
         if self.pid.poll() is None:
             self.pid.wait()
 
-        if self.out is None:
-            (self.out, self.err) = self.pid.communicate()
+        if self.raw_out is None:
+            (self.raw_out, self.raw_err) = self.pid.communicate()
 
-        if type(self.out) is bytes:
-            self.out = self.out.decode('utf-8')
+        try:
+            if type(self.raw_out) is bytes:
+                self.out = self.raw_out.decode('utf-8')
+        except UnicodeDecodeError:
+            self.out = None
 
-        if type(self.err) is bytes:
-            self.err = self.err.decode('utf-8')
+        try:
+            if type(self.err) is bytes:
+                self.err = self.raw_err.decode('utf-8')
+        except UnicodeDecodeError:
+            self.err = None
 
         if self.critical and self.pid.poll() != 0:
             Configuration.logger.critical("Process %s exited with status %d. Stderr: %s" %
-                                        (" ".join(self.command), self.poll(), self.err))
+                                         (" ".join(self.command), self.poll(), self.err))
             sys.exit(self.poll())
 
         return self.out, self.err

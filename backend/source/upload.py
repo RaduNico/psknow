@@ -70,7 +70,11 @@ def get_hccapx_file(attack_type, filepath):
 
     # Conversion to hccapx
     die(not os.path.isfile(filepath), "File %s does not exist!" % filepath)
-    stdout = Process(["hcxpcaptool", flag, temp_filename, filepath], crit=True).stdout()
+    command = ["hcxpcaptool", flag, temp_filename, filepath]
+
+    print(command)
+
+    stdout = Process(command, crit=True).stdout()
 
     if "written to" not in stdout:
         os.remove(temp_filename)
@@ -130,8 +134,6 @@ def treat_duplicate(wifi_entry):
         return None, True
 
     duplicates = list(duplicates)
-
-    Configuration.logger.warning("GOT HERE %s" % duplicates)
 
     # There are multiple entries with the same SSID-MAC pair
     if len(duplicates) > 1:
@@ -203,6 +205,30 @@ def treat_duplicate(wifi_entry):
         flash(message, category=category)
 
     return duplicate_flag, False
+
+
+# See for reference https://hashcat.net/wiki/doku.php?id=hccapx
+def parse_hccapx(data):
+    hccapx_len = 0x189
+    result = []
+
+    while True:
+        idx = data.find(b'HCPX')
+        if idx == -1:
+            break
+
+        hccapx = data[idx: idx + hccapx_len + 1]
+
+        if len(hccapx) < hccapx_len:
+            break
+
+        data = data[idx + hccapx_len + 1:]
+        essid = hccapx[0xa:0x2a].decode('utf8').rstrip('\x00')
+        mac_hex = hccapx[0x3b:0x41].hex()
+        mac = ":".join(a + b for a, b in zip(mac_hex[::2], mac_hex[1::2]))
+        result.append((mac, essid))
+
+    return result
 
 
 # TODO change this to proper file type check - use file or directly detect magic numbers
@@ -278,17 +304,31 @@ def check_handshake(file_path, filename, wifi_entry):
                            (Configuration.empty_pot_path, crack_type, temp_filename)
 
             # Test with hashcat if files contain valid data
-            to_crack = list(filter(None, Process(show_command, crit=True).stdout().split('\n')))
+            mac_ssid_list = []
+            if hs_type == "PMKID":
+                output = Process(show_command, crit=True).stdout()
 
-            for cracked_target in to_crack:
-                cracker_obj = Configuration.hashcat_left_regex.match(cracked_target)
-
-                if cracker_obj is None:
-                    Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
+                if output is None or len(output) <= 0:
                     continue
 
-                mac = ":".join(a + b for a, b in zip(cracker_obj.group(1)[::2], cracker_obj.group(1)[1::2]))
+                for cracked_target in output.split():
+                    cracker_obj = Configuration.hashcat_left_regex.match(cracked_target)
 
+                    if cracker_obj is None:
+                        Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
+                        continue
+
+                    mac = ":".join(a + b for a, b in zip(cracker_obj.group(1)[::2], cracker_obj.group(1)[1::2]))
+                    ssid = bytearray.fromhex(cracker_obj.group(2)).decode()
+
+                    mac_ssid_list.append((mac, ssid))
+            else:
+                print(show_command)
+                raw_output = Process(show_command, crit=True).raw_stdout()
+
+                mac_ssid_list = parse_hccapx(raw_output)
+
+            for mac, ssid in mac_ssid_list:
                 # Remove duplicate entries in the same file - filter by MAC
                 flag = False
                 for hs in entries:
@@ -300,15 +340,11 @@ def check_handshake(file_path, filename, wifi_entry):
 
                 handshake = deepcopy(Configuration.default_handshake)
                 handshake["MAC"] = mac
-
-                handshake["SSID"] = cracker_obj.group(2)
-                if hs_type == "PMKID":
-                    handshake["SSID"] = bytearray.fromhex(cracker_obj.group(2)).decode()
-
-                if handshake["SSID"].startswith("$HEX[") and handshake["SSID"].endswith("]"):
-                    handshake["SSID"] = bytes.fromhex(handshake["SSID"][5:-1]).decode('utf-8')
-
+                handshake["SSID"] = ssid
                 handshake["handshake_type"] = hs_type
+
+                # if handshake["SSID"].startswith("$HEX[") and handshake["SSID"].endswith("]"):
+                #     handshake["SSID"] = bytes.fromhex(handshake["SSID"][5:-1]).decode('utf-8')
 
                 # Avoid duplicate 'duplicate message' for files with both PMKID and handshakes
                 if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
@@ -325,6 +361,7 @@ def check_handshake(file_path, filename, wifi_entry):
 
                 if error:
                     return False, None
+
                 if is_duplicate:
                     duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
                     duplicate_flag = True
@@ -332,7 +369,7 @@ def check_handshake(file_path, filename, wifi_entry):
 
                 entries.append(tmp_wifi)
 
-            os.remove(temp_filename)
+            # os.remove(temp_filename)
 
     if len(entries) == 0:
         if not duplicate_flag:
