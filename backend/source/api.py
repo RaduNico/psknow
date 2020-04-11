@@ -69,7 +69,10 @@ def require_key(f):
         except (jwt.exceptions.InvalidSignatureError, jwt.exceptions.DecodeError):
             return jsonify({"success": False, "reason": "Invalid API key!"})
 
-        user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except. Check for none
+        user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except
+
+        if user_entry is None:
+            return jsonify({"success": False, "reason": "Invalid user '%s'" % decoded_api_key["user"]})
 
         try:
             if api_key not in user_entry["api_keys"] or user_entry["allow_api"] is not True:
