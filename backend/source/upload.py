@@ -3,6 +3,7 @@ import tempfile
 import os
 import string
 import random
+import shutil
 from .process import Process
 from .config import Configuration
 from .wrappers import die, not_admin, check_db_conn
@@ -440,7 +441,7 @@ def upload_file():
 
         # Save received file
         try:
-            os.rename(tmp_path, file_path)
+            shutil.move(tmp_path, file_path)
             Configuration.logger.info("Saved file at %s" % file_path)
         except Exception as e:
             Configuration.logger.error("Exception at saving received file at path = %s : %s" % (file_path, e))
