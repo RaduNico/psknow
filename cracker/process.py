@@ -283,8 +283,8 @@ class DoubleProcess(NoProcess):
 
             # TODO this can be generic. If this becomes static the poll needs to be checked against None
             if self.critical and self.fst_proc.poll() != 0:
-                Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
-                                             (self.fst_cmd, self.fst_proc.poll(), None))
+                Configuration.logger.debug("First process %s exited with status %d. Stderr:\n%s" %
+                                           (self.fst_cmd, self.fst_proc.poll(), None))
                 self._force_cleanup()
                 sys.exit(self.fst_proc.poll())
 
@@ -330,8 +330,8 @@ class DoubleProcess(NoProcess):
             if self.critical and self.snd_proc.poll() != 0:
                 # Second process could be hashcat which sometimes returns 1 but no error
                 if DoubleProcess.command_is_hashcat(self.snd_cmd) and self.snd_proc.poll() != 1:
-                    Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
-                                                 (self.snd_cmd, self.snd_proc.poll(), self.snd_err))
+                    Configuration.logger.debug("Second process %s exited with status %d. Stderr:\n%s" %
+                                               (self.snd_cmd, self.snd_proc.poll(), self.snd_err))
                     self._force_cleanup()
                     sys.exit(self.snd_proc.poll())
 
