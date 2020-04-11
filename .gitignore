@@ -25,3 +25,6 @@ helpers/sources/*
 */.idea/
 .idea/
 *.pyc
+*.cap
+*.pcapng
+*.16800
