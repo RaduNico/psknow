@@ -50,3 +50,12 @@ def generic_find(col, query, api_query=False):
 
     return values, err
 
+def lookup_by_id(internal_id):
+    try:
+        document = Configuration.wifis.find_one({"id": internal_id})
+        Configuration.logger.info("Lookup for id '%s'" % internal_id)
+        return document
+    except Exception as e:
+        Configuration.logger.error(
+            "Database error at retrieving document with internal id '%s': %s" % (internal_id, e))
+        return False

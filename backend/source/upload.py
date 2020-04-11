@@ -3,11 +3,10 @@ import tempfile
 import os
 import string
 import random
-
 from .process import Process
 from .config import Configuration
 from .wrappers import die, not_admin, check_db_conn
-from .database_helper import add_user_to_entry_id, generic_find
+from .database_helper import add_user_to_entry_id, generic_find, lookup_by_id
 
 from werkzeug.utils import secure_filename
 from flask import flash, redirect, Blueprint, request, render_template
@@ -84,14 +83,15 @@ def get_hccapx_file(attack_type, filepath):
 
 
 # Return True if error occured or False otherwise
-def retire_handshake(internal_id):
-    try:
-        document = Configuration.wifis.find_one({"id": internal_id})
-        Configuration.logger.info("Lookup for id '%s'" % internal_id)
-    except Exception as e:
-        Configuration.logger.error(
-            "Database error at retrieving document with internal id '%s': %s" % (internal_id, e))
-        flash("Server error at duplication data.")
+def retire_handshake(internal_id, document=None):
+    if document is None:
+        document = lookup_by_id(internal_id)
+
+    if document is None:
+        flash("Id does not exist!")
+        return False
+    if document is False:
+        flash("Error occured")
         return True
 
     del document["_id"]
