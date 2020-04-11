@@ -7,6 +7,10 @@ from .wrappers import is_admin, requires_admin, check_db_conn
 from flask import render_template, request, redirect, flash, url_for, Blueprint
 from flask_login import login_user, logout_user, login_required, current_user
 
+from .database_helper import update_hs_id, lookup_by_id
+
+from .upload import retire_handshake
+
 blob_api = Blueprint('blob_api', __name__)
 
 
@@ -14,6 +18,7 @@ def get_cracked_tuple(document):
     handshake = document["handshake"]
     result = dict()
 
+    result["id"] = document["id"]
     result["ssid"] = handshake["SSID"]
     result["mac"] = handshake["MAC"]
     result["hs_type"] = handshake["handshake_type"]
@@ -24,6 +29,7 @@ def get_cracked_tuple(document):
     result["date"] = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
     result["raw_date"] = handshake["date_cracked"]
 
+
     return result
 
 
@@ -31,6 +37,7 @@ def get_uncracked_tuple(document):
     handshake = document["handshake"]
     result = dict()
 
+    result["id"] = document["id"]
     result["ssid"] = handshake["SSID"]
     result["mac"] = handshake["MAC"]
     result["hs_type"] = handshake["handshake_type"]
@@ -143,6 +150,30 @@ def home():
     cracked = sorted(cracked, key=lambda k: k["raw_date"])
 
     return render_template('home.html', uncracked=uncracked, cracked=cracked, logged_in=logged_in)
+
+
+@blob_api.route('/delete_wifi/', methods=['POST'])
+@login_required
+def delete_wifi():
+
+    id = request.form.get("id")
+    document = lookup_by_id(id)
+    if document is None:
+        flash("Id does not exist!")
+        return redirect(url_for("home"))
+
+    if document is False:
+        flash("Internal error occured")
+        return redirect(url_for("blob_api.home"))
+
+    new_users = document["users"]
+    new_users.remove(current_user.get_id())
+    if new_users == []:
+        retire_handshake(id, document)
+    else:
+        update_hs_id(id, {"users" : new_users})
+
+    return redirect(url_for("blob_api.home"))
 
 
 def get_rule_tuple(rule):
