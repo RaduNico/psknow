@@ -72,8 +72,6 @@ def get_hccapx_file(attack_type, filepath):
     die(not os.path.isfile(filepath), "File %s does not exist!" % filepath)
     command = ["hcxpcaptool", flag, temp_filename, filepath]
 
-    print(command)
-
     stdout = Process(command, crit=True).stdout()
 
     if "written to" not in stdout:
@@ -323,7 +321,6 @@ def check_handshake(file_path, filename, wifi_entry):
 
                     mac_ssid_list.append((mac, ssid))
             else:
-                print(show_command)
                 raw_output = Process(show_command, crit=True).raw_stdout()
 
                 mac_ssid_list = parse_hccapx(raw_output)
@@ -369,7 +366,7 @@ def check_handshake(file_path, filename, wifi_entry):
 
                 entries.append(tmp_wifi)
 
-            # os.remove(temp_filename)
+            os.remove(temp_filename)
 
     if len(entries) == 0:
         if not duplicate_flag:
