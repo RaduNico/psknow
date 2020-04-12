@@ -37,7 +37,7 @@ class Configuration(object):
     hashcat_potfile_path = os.path.join(attack_path, 'hashcat.pot')
 
     # Cracking regexes
-    hashcat_show_regex = re.compile("[0-9a-f]*[:*][0-9a-f]{12}[:*][0-9a-f]{12}[:*].*[:*](.*)[\n]?$")
+    hashcat_show_regex = re.compile("[0-9a-f]*:[0-9a-f]{12}:.*[:*](.*)[\n]?$")
     atoi_regex = re.compile(" *[-]?[0-9]*")
 
     hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]*)$")
