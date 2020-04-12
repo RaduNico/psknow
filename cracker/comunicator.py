@@ -1,27 +1,22 @@
-from pynput.keyboard import Listener
+import sys
+import tty
+import termios
+
+from _thread import start_new_thread
 from collections import deque
 from threading import Lock
 from config import Configuration
 
 
-def on_press(key):
-    try:
-        char = key.char
-    except AttributeError:
-        return
+def reader_thread():
+    tty.setcbreak(sys.stdin.fileno())
 
-    if key in Comunicator.pressed_key:
-        return
+    while Comunicator.reader_alive:
+        key = sys.stdin.read(1)
 
-    Comunicator.pressed_key.add(key)
-
-    with Comunicator.cmd_lock:
-        if Comunicator.enabled:
-            Comunicator.cmd_deque.append(char)
-
-
-def on_release(key):
-    Comunicator.pressed_key.discard(key)
+        with Comunicator.cmd_lock:
+            if Comunicator.enabled:
+                Comunicator.cmd_deque.append(key)
 
 
 class Comunicator:
@@ -36,11 +31,13 @@ class Comunicator:
     finished = False
     interactive = False
     enabled = False
+    space_needed = False
+    reader_alive = False
+    old_settings = None
 
     pressed_key = set()
     cmd_lock = Lock()
     cmd_deque = deque()
-    listener = Listener(on_press=on_press, on_release=on_release)
 
     @staticmethod
     def print_commands(space=True):
@@ -61,7 +58,9 @@ class Comunicator:
             if Comunicator.finished:
                 msg = Comunicator.non_interactive_cmds_f
 
-        print(msg)
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+        Comunicator.space_needed = True
 
     @staticmethod
     def get_command():
@@ -73,11 +72,18 @@ class Comunicator:
 
     @staticmethod
     def initialize():
-        Comunicator.listener.start()
+        Comunicator.old_settings = termios.tcgetattr(sys.stdin.fileno())
+        Comunicator.reader_alive = True
+        start_new_thread(reader_thread, ())
+        # Comunicator.listener.start()
 
     @staticmethod
     def stop():
-        Comunicator.listener.stop()
+        Comunicator.reader_alive = False
+
+        if Comunicator.old_settings is not None:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, Comunicator.old_settings)
+        # Comunicator.listener.stop()
 
     @staticmethod
     def enable(interactive=False):
@@ -92,6 +98,10 @@ class Comunicator:
 
     @staticmethod
     def printer(msg, reprint=True):
+        if Comunicator.space_needed is True:
+            print("")
+            Comunicator.space_needed = False
+
         print(msg)
         if reprint:
             Comunicator.print_commands()
@@ -99,6 +109,11 @@ class Comunicator:
     @staticmethod
     def dual_printer(msg, logger, reprint=True):
         logger(msg)
+
+        if Comunicator.space_needed is True:
+            print("")
+            Comunicator.space_needed = False
+
         print(msg)
         if reprint:
             Comunicator.print_commands()
