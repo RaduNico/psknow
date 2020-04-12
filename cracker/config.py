@@ -8,10 +8,13 @@ from comunicator import Comunicator
 
 
 class Configuration(object):
-    apikey = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJ1c2VyIjoicmFkdSIsImRhdGVfZ2VuZXJhdGVkIjoiMjAxOS0wOS0wOFQxOTo" \
-             "0Mzo1My4yNTExNDQiLCJrZXlfaWQiOiIxMDAwIiwibmFtZSI6Im11aWUifQ.opggNbRjlkv2S3GzzyK145CDKmZrzuoR9xxKZkFr" \
-             "HjnSpIfwaTO5G-wvu5AENUknItPePFrRTKd_ZIzaOq5MeQ"
-    john_path = "/home/pandora/sec/psknow/dependencies/sources/john/run/john"
+    apikey = None
+    john_path = None
+
+    config_file = "cracker.conf"
+    empty_config = {
+        "john_path": "",
+	    "apikey": "" }
 
     # Remote location info
     # remote_server = "https://pandorak.go.ro/api/v1/"
@@ -109,14 +112,76 @@ class Configuration(object):
             except Exception as e:
                 Comunicator.fatal_debug_printer("Error trying to dump data in %s: %s" % (Configuration.sha1s_filename, e))
 
+        one_program = False
         for program in Configuration.programs:
             # John path needs to be hardcoded it seems
             # Only the key is relevant for hashcat/john - we mark them with True
-            if program == "john" and Configuration.john_path != "john" and os.path.exists(Configuration.john_path):
-                Configuration.capabilities[program] = True
+            if program == "john":
+                if Configuration.john_path is not None:
+                    if not os.path.exists(Configuration.john_path):
+                        Comunicator.fatal_debug_printer("Supplied john path '%s' is invalid. Check config file!" %
+                                                        Configuration.john_path)
+                    Configuration.capabilities[program] = True
+                    one_program = True
+                else:
+                    Comunicator.printer("John the ripper not installed, some rules will not run until it is installed and "
+                                        "path supplied in config file '%s'" % Configuration.config_file)
+                continue
 
             if which(program) is not None:
                 Configuration.capabilities[program] = True
+                one_program = True
+            else:
+                Comunicator.printer("'%s' not installed, some rules will not run until it is installed" % program)
+
+        if not one_program:
+            Comunicator.fatal_regular_message("None of the cracking programs are installed, cracking not possible!")
+
+    @staticmethod
+    def load_config():
+        """
+            Loads api key from file defined in variable Configuration.apikey_path.
+            Ignores lines prefixed by '#', any leading ' ' and trailing '\n'
+            The key is stored in Configuration.apikey
+        :return:
+            None
+        """
+        error_string = ""
+        try:
+            with open(Configuration.config_file) as file:
+                config = json.load(file)
+                def load_key(lkey):
+                    try:
+                        return config[lkey], ""
+                    except KeyError:
+                        return None, "Missing vital information '%s' from config file\n" % lkey
+
+                Configuration.apikey, err = load_key("apikey")
+                error_string += err
+                Configuration.john_path, err = load_key("john_path")
+                error_string += err
+        except json.decoder.JSONDecodeError as e:
+            Comunicator.fatal_regular_message("Configuration file '%s' is not a valid json with error '%s'. Fix"
+                                      "file or completely remove to restore to default state." %
+                                      (Configuration.config_file, e))
+        except FileNotFoundError:
+            with open(Configuration.config_file, "w") as fd:
+                json.dump(Configuration.empty_config, fd)
+            Comunicator.fatal_regular_message("Configuration file '%s' did not exist. Empty file was generated, please"
+                                      "fill in data for the cracker to properly work." % Configuration.config_file)
+        if len(error_string) > 0:
+            if error_string.endswith("\n"):
+                error_string = error_string[:-1]
+            Comunicator.fatal_regular_message(error_string)
+
+        if Configuration.apikey is None or len(Configuration.apikey) < 10:
+            Comunicator.fatal_regular_message("Invalid or missing api key in config file '%s'. Please generate key "
+                                      "and write it on the configuration file." % Configuration.config_file)
+
+        if len(Configuration.john_path) == 0:
+            Configuration.john_path = None
+        elif not os.path.exists(Configuration.john_path):
+            Comunicator.fatal_regular_message("Supplied path for john the ripper '%s' is not valid" % Configuration.john_path)
 
     @staticmethod
     def load_sha1s():
@@ -158,6 +223,7 @@ class Configuration(object):
 
     @staticmethod
     def initialize():
+        Configuration.load_config()
         Configuration.load_sha1s()
         Configuration.gather_capabilities()
 
