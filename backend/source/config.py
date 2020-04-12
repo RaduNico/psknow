@@ -4,7 +4,6 @@ import os
 import json
 import hashlib
 
-from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 from secrets import token_urlsafe
@@ -202,8 +201,8 @@ class Configuration(object):
 
     @staticmethod
     def log_fatal(message):
+        print(message)
         Configuration.logger.critical(message)
-        sleep(10)
         sys.exit(-1)
 
     @staticmethod
