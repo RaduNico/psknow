@@ -8,11 +8,15 @@ from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 from secrets import token_urlsafe
+from shutil import which
 from threading import Lock
 
 
 class Configuration(object):
     static_folder = "static"
+
+    # Dependencies
+    crit_deps = ["hcxpcaptool", "hashcat", "aircrack-ng"]
 
     # Database Variables
     database_location = '127.0.0.1:27017'
@@ -225,6 +229,16 @@ class Configuration(object):
             Configuration.log_fatal("Could not establish initial connection with error %s" % e)
 
     @staticmethod
+    def check_program_installed(name):
+        return which(name) is not None
+
+    @staticmethod
+    def check_critical():
+        for crit_dep in Configuration.crit_deps:
+            if not Configuration.check_program_installed(crit_dep):
+                Configuration.log_fatal("Please install '%s' in order to run psknow-backend" % crit_dep)
+
+    @staticmethod
     def read_rules():
         rules = []
 
@@ -350,6 +364,9 @@ class Configuration(object):
     @staticmethod
     def preinitialize(server):
         Configuration.logger = server.log
+
+        # Check critical dependecies
+        Configuration.check_critical()
 
         # Read rule data
         Configuration.read_rules()
