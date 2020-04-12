@@ -207,18 +207,33 @@ class Configuration(object):
         sys.exit(-1)
 
     @staticmethod
+    def get_connection():
+        if Configuration.login_with_credentials:
+            conn_loc = "mongodb://%s:%s@%s/%s" % \
+                       (Configuration.db_username, Configuration.db_password,
+                        Configuration.database_location, Configuration.database_name)
+        else:
+            conn_loc = "mongodb://%s/%s" % \
+                       (Configuration.database_location, Configuration.database_name)
+        Configuration.logger.debug("Connecting at %s" % conn_loc)
+        Configuration.logger.debug("Connecting at %s" % conn_loc)
+
+        return MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
+
+    @staticmethod
+    def check_preinit_dbconn():
+        try:
+            Configuration.conn = Configuration.get_connection()
+            Configuration.check_db_conn()
+            Configuration.conn = None
+        except Exception as e:
+            Configuration.log_fatal("Could not establish initial database connection. Error '%s'" % e)
+
+    @staticmethod
     def database_conection():
         try:
-            if Configuration.login_with_credentials:
-                conn_loc = "mongodb://%s:%s@%s/%s" %\
-                           (Configuration.db_username, Configuration.db_password,
-                            Configuration.database_location, Configuration.database_name)
-            else:
-                conn_loc = "mongodb://%s/%s" %\
-                           (Configuration.database_location, Configuration.database_name)
-            Configuration.logger.debug("Connecting at %s" % conn_loc)
+            Configuration.conn = Configuration.get_connection()
 
-            Configuration.conn = MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
             Configuration.db = Configuration.conn[Configuration.database_name]
             Configuration.wifis = Configuration.db["wifis"]
             Configuration.users = Configuration.db["users"]
@@ -226,7 +241,7 @@ class Configuration(object):
             Configuration.retired = Configuration.db["retired"]
             Configuration.check_db_conn()
         except Exception as e:
-            Configuration.log_fatal("Could not establish initial connection with error %s" % e)
+            Configuration.log_fatal("Could not establish database connection. Error '%s'" % e)
 
     @staticmethod
     def check_program_installed(name):
@@ -382,6 +397,9 @@ class Configuration(object):
         # Make sure the pot_path is empty
         with open(Configuration.empty_pot_path, "w") as _:
             pass
+
+        # Check that database is up and running
+        Configuration.check_preinit_dbconn()
 
     @staticmethod
     def check_db_conn():
