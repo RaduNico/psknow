@@ -248,7 +248,8 @@ class Cracker:
         Comunicator.disable()
 
         # Check if process exited cleanly
-        Cracker.crt_process.check_clean_exit()
+        if Cracker.crt_process is not None:
+            Cracker.crt_process.check_clean_exit()
         show_stdout = list(filter(None, SingleProcess(Cracker.attack_command +
                                                       " --show").split_stdout()))
         password = ""
@@ -260,12 +261,18 @@ class Cracker:
                 die(cracked_obj is None, "REGEX error! could not match the --show line:%s" % show_stdout)
                 password = cracked_obj.group(1)
 
+        msg = "[FAIL] Password for '%s' is not contained in rule '%s'\n" %\
+              (Cracker.mac_ssid_job , Cracker.crt_rule["name"])
+        if len(password) > 7:
+            msg = "[SUCCESS] The password for '%s' is '%s'\n" % (Cracker.mac_ssid_job , password)
+
+        Configuration.dual_print(Configuration.logger.info, msg)
         Cracker.safe_send_result(password)
 
         Cracker.clean_variables()
 
     @staticmethod
-    def is_potfile_duplicated(command):
+    def is_already_cracked(command):
         show_stdout = list(filter(None, SingleProcess(command + " --show").split_stdout()))
 
         if len(show_stdout) > 0:
@@ -301,10 +308,11 @@ class Cracker:
         Configuration.logger.info("Trying rule %s on '%s-%s'" %
                                   (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))
 
-        if Cracker.is_potfile_duplicated(Cracker.attack_command):
-            msg = "Duplication for %s happened. It is already present in potfile!" % Cracker.mac_ssid_job
-            Configuration.dual_print(Configuration.logger.critical, msg)
-            fast_stop()
+        if Cracker.is_already_cracked(Cracker.attack_command):
+            msg = "'%s' has already been cracked. Attempting to send result." % Cracker.mac_ssid_job
+            Configuration.dual_print(Configuration.logger.warning, msg)
+            Cracker.process_result()
+            return
 
         if generator_command == "":
             Cracker.crt_process = SingleProcess(Cracker.attack_command)
