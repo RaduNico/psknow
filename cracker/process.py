@@ -283,10 +283,10 @@ class DoubleProcess(NoProcess):
 
             # TODO this can be generic. If this becomes static the poll needs to be checked against None
             if self.critical and self.fst_proc.poll() != 0:
-                Configuration.logger.debug("First process %s exited with status %d. Stderr:\n%s" %
-                                           (self.fst_cmd, self.fst_proc.poll(), None))
+                Configuration.logger.error("First process %s exited with status %d. Stderr:\n%s" %
+                                           (self.fst_cmd, self.fst_proc.poll(), self.fst_err))
                 self._force_cleanup()
-                sys.exit(self.fst_proc.poll())
+                Configuration.log_fatal("Fatal error encountered in critical first process.")
 
             return True
         return False
@@ -333,7 +333,7 @@ class DoubleProcess(NoProcess):
                     Configuration.logger.debug("Second process %s exited with status %d. Stderr:\n%s" %
                                                (self.snd_cmd, self.snd_proc.poll(), self.snd_err))
                     self._force_cleanup()
-                    sys.exit(self.snd_proc.poll())
+                    Configuration.log_fatal("Fatal error encountered in critical second process.")
 
             return True
 
@@ -524,7 +524,7 @@ class SingleProcess(NoProcess):
                     Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
                                                  (self.cmd, self.proc.poll(), self.err))
                     self._force_cleanup()
-                    sys.exit(self.proc.poll())
+                    Configuration.log_fatal("Fatal error encountered in critical single process.")
 
             return True
         return False
