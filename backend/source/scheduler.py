@@ -236,6 +236,8 @@ class Scheduler:
         if next_rule["type"] == "john":
             data = {"rule": next_rule.get("rule", None),
                     "baselist": Configuration.cap_dict[next_rule["path"]]["path"]}
+        elif next_rule["type"] == "mask_hashcat":
+            data = next_rule['mask_hashcat']
         elif next_rule["path"] != "":
             data = Configuration.cap_dict[next_rule["path"]]["path"]
 
