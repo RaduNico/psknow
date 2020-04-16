@@ -74,6 +74,7 @@
                 <th>Date Added</th>
                 <th>Tried rules</th>
                 <th>Estimated time</th>
+                <th>Action</th>
             </tr>
             {% for handshake in uncracked %}
             <tr>
@@ -83,6 +84,12 @@
                 <td>{{ handshake["date_added"] }}</td>
                 <td>{{ handshake["tried_rules"] }}</td>
                 <td>{{ handshake["eta"] }}</td>
+                <td>
+                  <form action="/delete_wifi/" method="post">
+                    <input type="hidden" name="id" value="{{ handshake['id'] }}" />
+                    <button type="submit">X</button>
+                 </form>
+                </td>
             </tr>
             {% endfor %}
         </table>
