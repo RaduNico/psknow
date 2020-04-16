@@ -85,6 +85,7 @@ def admin_panel():
 
 @blob_api.route('/', methods=['GET'])
 def home():
+    Configuration.logger.error("ZERO")
     if is_admin(current_user):
         if check_db_conn() is None:
             flash("DATABASE IS DOWN")
@@ -123,6 +124,7 @@ def home():
         return render_template('admin_home.html', user_handshakes=user_handshakes)
 
     logged_in = current_user.is_authenticated
+    Configuration.logger.error("ONE")
     if logged_in and check_db_conn() is None:
         flash("Database error!")
         return render_template('home.html', logged_in=True)
@@ -141,6 +143,7 @@ def home():
 
         # Sort based on crack date using raw date field
     cracked = sorted(cracked, key=lambda k: k["raw_date"])
+    Configuration.logger.error("TWO")
 
     return render_template('home.html', uncracked=uncracked, cracked=cracked, logged_in=logged_in)
 
