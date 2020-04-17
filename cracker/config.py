@@ -1,10 +1,10 @@
 import sys
-import logbook
 import re
 import os
 import hashlib
 import json
 from shutil import which
+from comunicator import Comunicator
 
 
 class Configuration(object):
@@ -19,12 +19,6 @@ class Configuration(object):
     capabilities = []
     capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
     programs = ["hashcat", "john"]
-
-    # Logging variables
-    log_filename = 'logs/cracker.log'
-    logLevel = "DEBUG"
-    # :logLevel = "INFO"
-    logger = None
 
     old_sha1s = None
     sha1s_filename = "crack/sha1s.txt"
@@ -51,11 +45,6 @@ class Configuration(object):
     no_work_message = "No work to be done at the moment."
     no_job_message = "No running job on this API key."
     cap_updated = "Capabilities updated!"
-
-    @staticmethod
-    def dual_print(log, message):
-        log(message)
-        print(message)
 
     @staticmethod
     def check_file(path, file):
@@ -99,7 +88,7 @@ class Configuration(object):
                 with open(Configuration.sha1s_filename, "w+") as fd:
                     json.dump(Configuration.old_sha1s, fd, indent=4)
             except Exception as e:
-                Configuration.log_fatal("Error trying to dump data in %s: %s" % (Configuration.sha1s_filename, e))
+                Comunicator.fatal_debug_printer("Error trying to dump data in %s: %s" % (Configuration.sha1s_filename, e))
 
         for program in Configuration.programs:
             # John path needs to be hardcoded it seems
@@ -108,13 +97,6 @@ class Configuration(object):
 
             if which(program) is not None:
                 Configuration.capabilities[program] = None
-
-    @staticmethod
-    def setup_logging():
-        Configuration.logger = logbook.Logger("")
-        Configuration.logger.handlers.append(logbook.FileHandler(Configuration.log_filename,
-                                                                 level=Configuration.logLevel))
-        Configuration.logger.info("Logging activated!")
 
     @staticmethod
     def load_sha1s():
@@ -129,7 +111,7 @@ class Configuration(object):
         except json.decoder.JSONDecodeError:
             return
         except Exception as e:
-            Configuration.log_fatal("Error trying to load %s data: %s" % (Configuration.sha1s_filename, e))
+            Comunicator.fatal_debug_printer("Error trying to load %s data: %s" % (Configuration.sha1s_filename, e))
 
     @staticmethod
     def sha1file(filepath):
@@ -142,14 +124,8 @@ class Configuration(object):
 
     @staticmethod
     def initialize():
-        Configuration.setup_logging()
         Configuration.load_sha1s()
         Configuration.gather_capabilities()
-
-    @staticmethod
-    def log_fatal(message):
-        Configuration.dual_print(Configuration.logger.critical, message)
-        sys.exit(-1)
 
 
 if __name__ == '__main__':

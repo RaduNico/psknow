@@ -7,7 +7,6 @@ import signal
 import stat
 import traceback
 
-
 from time import sleep
 from tempfile import mkstemp
 from base64 import b64decode
@@ -25,7 +24,7 @@ def die(condition, message):
         msg = "File '%s', line %s, in %s: '%s'" % \
                  (inspect.getmodule(inspect.stack()[1][0]).__file__, inspect.currentframe().f_back.f_lineno,
                   inspect.stack()[1][3], message)
-        Configuration.dual_print(Configuration.logger.critical, msg)
+        Comunicator.dual_printer(Comunicator.logger.critical, msg)
         sys.exit(-1)
 
 
@@ -35,13 +34,13 @@ slow_stop_flag = False
 def slow_stop(signum, _):
     global slow_stop_flag
 
-    Configuration.logger.info("Received %s signal. Slow stopping!" % signum)
+    Comunicator.info_logger("Received %s signal. Slow stopping!" % signum)
     slow_stop_flag = True
 
 
 def fast_stop():
     if Cracker.crt_process is not None:
-        Configuration.logger.info("Killing running process %s" % Cracker.crt_process.get_command())
+        Comunicator.info_logger("Killing running process %s" % Cracker.crt_process.get_command())
         # Kill currently running process
         Cracker.crt_process.terminate()
 
@@ -60,10 +59,10 @@ def fast_stop():
 
 def signal_handler(signum, _):
     if signum == signal.SIGINT or signum == signal.SIGTERM:
-        Configuration.logger.info("Received signal %d. Exitting!" % signum)
+        Comunicator.info_logger("Received signal %d. Exitting!" % signum)
         fast_stop()
     else:
-        Configuration.logger.info("Received %s signal" % signum)
+        Comunicator.info_logger("Received %s signal" % signum)
 
 
 class Cracker:
@@ -196,8 +195,8 @@ class Cracker:
             speed = int(Configuration.atoi_regex.match(Cracker.eta_dict["speed"]).group())
             if speed != 0:
                 if Cracker.crt_rule["wordsize"] < Cracker.eta_dict["progress"]:
-                    Configuration.logger.error("Dict size (%d) seems less than current attacked (%d)" %
-                                               (Cracker.crt_rule["wordsize"], Cracker.eta_dict["progress"]))
+                    Comunicator.error_logger("Dict size (%d) seems less than current attacked (%d)" %
+                                             (Cracker.crt_rule["wordsize"], Cracker.eta_dict["progress"]))
 
                 eta_seconds = (Cracker.crt_rule["wordsize"] - Cracker.eta_dict["progress"]) / speed
                 eta = Cracker.seconds_to_time(eta_seconds)
@@ -229,14 +228,14 @@ class Cracker:
                     os.remove(Configuration.save_result_filename)
 
                 if res is False:
-                    Configuration.logger.warning("Server cancelled last job. Requesting stopwork.")
+                    Comunicator.warning_logger("Server cancelled last job. Requesting stopwork.")
                     Cracker.req.stopwork()
 
                 break
             except Cracker.req.ServerDown:
                 if not written_flag:
                     msg = "Trying to send result '%s' for last job but the server is unreachable" % password
-                    Configuration.dual_print(Configuration.logger.warning, msg)
+                    Comunicator.dual_printer(Comunicator.logger.warning, msg)
                     written_flag = True
                     with open(Configuration.save_result_filename, "w") as fp:
                         fp.write(password)
@@ -261,12 +260,12 @@ class Cracker:
                 die(cracked_obj is None, "REGEX error! could not match the --show line:%s" % show_stdout)
                 password = cracked_obj.group(1)
 
-        msg = "[FAIL] Password for '%s' is not contained in rule '%s'\n" %\
-              (Cracker.mac_ssid_job , Cracker.crt_rule["name"])
+        msg = "[FAIL] Password for '%s' is not contained in rule '%s'" %\
+              (Cracker.mac_ssid_job, Cracker.crt_rule["name"])
         if len(password) > 7:
-            msg = "[SUCCESS] The password for '%s' is '%s'\n" % (Cracker.mac_ssid_job , password)
+            msg = "[SUCCESS] The password for '%s' is '%s'" % (Cracker.mac_ssid_job, password)
 
-        Configuration.dual_print(Configuration.logger.info, msg)
+        Comunicator.printer(msg)
         Cracker.safe_send_result(password)
 
         Cracker.clean_variables()
@@ -284,7 +283,7 @@ class Cracker:
         Cracker.mac_ssid_job = "%s-%s" % (work["handshake"]["mac"], work["handshake"]["ssid"])
         msg = "Running '%s' with rule '%s'" % (Cracker.mac_ssid_job, work["rule"]["name"])
         Comunicator.enable(interactive=False)
-        Comunicator.dual_printer(msg, Configuration.logger.info)
+        Comunicator.dual_printer(Comunicator.logger.info, msg)
 
         _, Cracker.path_temp_file = mkstemp(prefix="psknow_crack")
 
@@ -305,12 +304,12 @@ class Cracker:
         generator_command, Cracker.attack_command, Cracker.scrambler =\
             Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_file, work["handshake"]["ssid"])
 
-        Configuration.logger.info("Trying rule %s on '%s-%s'" %
-                                  (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))
+        Comunicator.info_logger("Trying rule %s on '%s-%s'" %
+                                (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))
 
         if Cracker.is_already_cracked(Cracker.attack_command):
-            msg = "'%s' has already been cracked. Attempting to send result." % Cracker.mac_ssid_job
-            Configuration.dual_print(Configuration.logger.warning, msg)
+            Comunicator.warning_logger("'%s' has already been cracked. Attempting to send result." %
+                                       Cracker.mac_ssid_job)
             Cracker.process_result()
             return
 
@@ -331,7 +330,7 @@ class Cracker:
             return
 
         if slow_stop_flag:
-            Configuration.logger.info("Slow shutdown signal received - shutting down!")
+            Comunicator.info_logger("Slow shutdown signal received - shutting down!")
             sys.exit(0)
 
         # Before getting more work make sure we are up to date
@@ -348,12 +347,12 @@ class Cracker:
 
         # No work to be done right now
         if work is None:
-            print("No work to be done, checking in 10 seconds again.")
+            Comunicator.printer("No work to be done, checking in 10 seconds again.")
             return
 
         # Redundant check
         if work is False:
-            Configuration.dual_print(Configuration.logger.warning, "Capabilities out of date!")
+            Comunicator.warning_logger("Capabilities out of date!")
             return
 
         Cracker.start_cracking(work)
@@ -373,9 +372,10 @@ class Cracker:
 
         for missing in missings:
             if missing["type"] == "program":
-                Configuration.dual_print(Configuration.logger.info, "Please install program '%s'" % missing["name"])
+                Comunicator.info_logger("Please install program '%s'" % missing["name"])
             elif missing["type"] in ["dict", "maskfile", "generator", "john-local.conf"]:
-                Configuration.dual_print(Configuration.logger.info, "Downloading '%s'..." % missing["path"])
+
+                Comunicator.info_logger("Downloading '%s'..." % missing["path"])
 
                 gather_flag = True
 
@@ -390,13 +390,13 @@ class Cracker:
                 try:
                     if Cracker.req.checkfile(filename) is None and \
                             Cracker.req.getfile(filename, missing["path"]) is None:
-                        Configuration.dual_print(Configuration.logger.info, "Downloaded '%s'" % missing["path"])
+                        Comunicator.info_logger("Downloaded '%s'" % missing["path"])
                         if missing["type"] == "generator":
                             os.chmod(missing["path"], stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 except Cracker.req.ServerDown:
                     return
             else:
-                Configuration.dual_print(Configuration.logger.warning, "Unknown missing type '%s'" % missing)
+                Comunicator.warning_logger("Unknown missing type '%s'" % missing)
 
         if gather_flag:
             Configuration.gather_capabilities()
@@ -454,24 +454,24 @@ class Cracker:
 
     @staticmethod
     def run():
-        Configuration.initialize()
-        Cracker.crt_workload = 4  # TODO get value from parameters, adjust from keyboard
+        Comunicator.initialize()
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        Cracker.req = Requester(Configuration.apikey, Comunicator.error_printer)
+        Configuration.initialize()
+        Cracker.crt_workload = 4  # TODO get value from parameters, adjust from keyboard
+
+        Cracker.req = Requester(Configuration.apikey, Comunicator.error_logger)
 
         Cracker.resume_work()
 
-        Comunicator.initialize()
-
         Comunicator.printer("Cracker initialized", reprint=False)
 
-        # Disable terminal echo
-        os.system("stty -echo")
-
         try:
+            # Disable terminal echo
+            os.system("stty -echo")
+
             last_time = None
             while True:
                 now_time = datetime.now()
@@ -484,10 +484,8 @@ class Cracker:
                     Cracker.parse_command(cmd)
                 sleep(0.1)
         except Exception as e:
-            Configuration.dual_print(Configuration.logger.critical,
-                                     "Caught unexpected exception: '%s'" % (traceback.format_exc()))
             Cracker.clean_variables()
-            die(True, e)
+            Comunicator.fatal_debug_printer("Caught unexpected exception: '%s' '%s'" % (e, traceback.format_exc()))
         finally:
             # Reenable terminal echo
             os.system("stty echo")
