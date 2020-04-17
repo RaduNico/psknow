@@ -48,6 +48,13 @@ class Configuration(object):
 
     @staticmethod
     def check_file(path, file):
+        """
+        :param path: The relative path to the file
+        :param file: The filename needed for indexing in the capabilities file/dictionary
+        :return:
+            True If the file has changed since last calculation
+            False Otherwise
+        """
         flag = False
         new_mtime = os.stat(path).st_mtime
 
@@ -65,6 +72,18 @@ class Configuration(object):
 
     @staticmethod
     def gather_capabilities():
+        """
+            Returns a dictionary of the client capabilities.
+            The list has two types of items:
+                1) Installed programs in the form of 'program': True
+                2) Files in the form of 'filename': sha1hash(file)
+            The hashes are used server side to check if the files changed in any way
+
+            This function also calls Configuration.check_file() to check if files changed
+            in any way
+            :return:
+                Dictionary as described above
+        """
         Configuration.capabilities = {}
         sha1_file_changed = False
 
@@ -92,14 +111,23 @@ class Configuration(object):
 
         for program in Configuration.programs:
             # John path needs to be hardcoded it seems
+            # Only the key is relevant for hashcat/john - we mark them with True
             if program == "john" and Configuration.john_path != "john" and os.path.exists(Configuration.john_path):
-                Configuration.capabilities[program] = None
+                Configuration.capabilities[program] = True
 
             if which(program) is not None:
-                Configuration.capabilities[program] = None
+                Configuration.capabilities[program] = True
 
     @staticmethod
     def load_sha1s():
+        """
+            To reduce startup time sha1's are stored in the file Configuration.sha1s_filename
+            and only recalculated if the file has changed after the hash was calculated.
+            This function loads the sha1 hashes along with the time when the hash was calculated into
+            the variable Configuration.old_sha1s
+        :return:
+            None
+        """
         Configuration.old_sha1s = {}
         if not os.path.exists(Configuration.sha1s_filename):
             with open(Configuration.sha1s_filename, "w+") as _:
@@ -115,6 +143,12 @@ class Configuration(object):
 
     @staticmethod
     def sha1file(filepath):
+        """
+            This function calculates the sha1 hexdigest for a given file
+        :param filepath: The file for which we calculated the sha1
+        :return:
+            sha1_hexdigest for given file
+        """
         with open(filepath, "rb") as f:
             hash_sha1 = hashlib.sha1()
             for chunk in iter(lambda: f.read(2 ** 20), b""):
