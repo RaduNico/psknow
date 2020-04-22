@@ -8,7 +8,7 @@ from copy import deepcopy
 
 
 db_username = "psknow"
-db_password = "xY6R0YPFBpjebMwFHBYXQTokZ25nI1G8eZfjWqQrUtUeajcucgKpNxncVBCW"
+db_password = ""
 database_location = "127.0.0.1"
 database_name = "psknow"
 
@@ -122,9 +122,13 @@ for entry in all_entries:
     old_crack_level = str(entry["handshake"]["crack_level"])
 
     del entry["handshake"]["crack_level"]
-    entry["handshake"]["tried_dicts"] = tried_dict[old_crack_level]
-    if entry["handshake"]["password"] != "":
-        entry["handshake"]["cracked_rule"] = rule_names[old_crack_level]
+
+    if old_crack_level == -10:
+        entry["handshake"]["tried_dicts"] = []
+    else:
+        entry["handshake"]["tried_dicts"] = tried_dict[old_crack_level]
+        if entry["handshake"]["password"] != "":
+            entry["handshake"]["cracked_rule"] = rule_names[old_crack_level]
 
     try:
         wifis.update({"id": entry["id"]}, entry)
