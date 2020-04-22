@@ -36,7 +36,7 @@ class Requester:
             :raises Requester.ServerDown: The server could not be reached
         """
         url = Configuration.remote_server + "getwork"
-        Configuration.logger.info("Requesting work from '%s'" % url)
+        Comunicator.info_logger("Requesting work from '%s'" % url)
         try:
             response = requests.post(url, json = {"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
         except requests.exceptions.ConnectionError:
@@ -69,7 +69,7 @@ class Requester:
             :raises Requester.ServerDown: The server could not be reached
         """
         url = Configuration.remote_server + "stopwork"
-        Configuration.logger.info("Stopping work from '%s'" % url)
+        Comunicator.info_logger("Stopping work from '%s'" % url)
         try:
             response = requests.post(url, data={"apikey": self.apikey}, timeout = 10)
         except requests.exceptions.ConnectionError:
@@ -81,7 +81,7 @@ class Requester:
         if err != "":
             msg = "Error stopping work '%s'" % err
             if suppress_stdout:
-                Configuration.logger.error(msg)
+                Comunicator.error_logger(msg)
             else:
                 self.err_printer(msg)
             return True
@@ -97,7 +97,7 @@ class Requester:
              :raises Requester.ServerDown: The server could not be reached
          """
         url = Configuration.remote_server + "pausework"
-        Configuration.logger.info("Pausing work from '%s'" % url)
+        Comunicator.info_logger("Pausing work from '%s'" % url)
         try:
             response = requests.post(url, data={"apikey": self.apikey})
         except requests.exceptions.ConnectionError:
@@ -119,7 +119,7 @@ class Requester:
             :raises Requester.ServerDown: The server could not be reached
          """
         url = Configuration.remote_server + "sendeta"
-        Configuration.logger.info("Sending eta to '%s': '%s'" % (url, eta))
+        Comunicator.info_logger("Sending eta to '%s': '%s'" % (url, eta))
         try:
             response = requests.post(url, data={"apikey": self.apikey, "eta": eta}, timeout = 10)
         except requests.exceptions.ConnectionError:
@@ -144,7 +144,7 @@ class Requester:
             :raises Requester.ServerDown: The server could not be reached
          """
         url = Configuration.remote_server + "checkfile"
-        Configuration.logger.info("Checking if file '%s' exists at '%s'" % (filename, url))
+        Comunicator.info_logger("Checking if file '%s' exists at '%s'" % (filename, url))
 
         try:
             response = requests.post(url, data={"apikey": self.apikey, "file": filename}, timeout = 10)
@@ -172,7 +172,7 @@ class Requester:
         """
 
         url = Configuration.remote_server + "getfile"
-        Configuration.logger.info("Getting file '%s' from '%s'" % (filename, url))
+        Comunicator.info_logger("Getting file '%s' from '%s'" % (filename, url))
 
         try:
             with requests.post(url, data={"apikey": self.apikey, "file": filename}, stream=True, timeout = 10) as req:
@@ -198,7 +198,7 @@ class Requester:
             :raises Requester.ServerDown: The server could not be reached
         """
         url = Configuration.remote_server + "getmissing"
-        Configuration.logger.info("Getting missing capabilites at '%s'" % url)
+        Comunicator.info_logger("Getting missing capabilites at '%s'" % url)
 
         try:
             response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
@@ -226,7 +226,7 @@ class Requester:
             :raises Requester.ServerDown: The server could not be reached
         """
         url = Configuration.remote_server + "sendresult"
-        Configuration.logger.info("Sending result at '%s'" % url)
+        Comunicator.info_logger("Sending result at '%s'" % url)
         try:
             response = requests.post(url, data={"apikey": self.apikey, "password": password}, timeout = 10)
         except requests.exceptions.ConnectionError:

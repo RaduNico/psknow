@@ -193,6 +193,11 @@ class Scheduler:
         query = {"handshake.open": False, "reserved_by": None, "handshake.password": "",
                  "handshake.tried_dicts.%s" % (Configuration.number_rules - 1): {"$exists": False}}
 
+        # Avoid sending error if the wifis collection was not created yet.
+        # This can happen if no handshakes have ever been uploaded
+        if "wifis" not in Configuration.db.list_collection_names():
+            return task, "No work to be done at the moment."
+
         # Lock this in order to ensure that multiple threads do not reserve the same handshake
         with Configuration.wifis_lock:
             mapper = Code(Scheduler.mapper_template % Scheduler.get_all_possible_rules(client_capabilities))
@@ -231,6 +236,8 @@ class Scheduler:
         if next_rule["type"] == "john":
             data = {"rule": next_rule.get("rule", None),
                     "baselist": Configuration.cap_dict[next_rule["path"]]["path"]}
+        elif next_rule["type"] == "mask_hashcat":
+            data = next_rule['mask_hashcat']
         elif next_rule["path"] != "":
             data = Configuration.cap_dict[next_rule["path"]]["path"]
 

@@ -7,7 +7,6 @@ import signal
 import stat
 import traceback
 
-
 from time import sleep
 from tempfile import mkstemp
 from base64 import b64decode
@@ -22,9 +21,10 @@ from comunicator import Comunicator
 
 def die(condition, message):
     if condition:
-        msg = "line %s in '%s': '%s'" % \
-                 (inspect.currentframe().f_back.f_lineno, inspect.stack()[1][3], message)
-        Configuration.dual_print(Configuration.logger.critical, msg)
+        msg = "File '%s', line %s, in %s: '%s'" % \
+                 (inspect.getmodule(inspect.stack()[1][0]).__file__, inspect.currentframe().f_back.f_lineno,
+                  inspect.stack()[1][3], message)
+        Comunicator.dual_printer(Comunicator.logger.critical, msg)
         sys.exit(-1)
 
 
@@ -34,13 +34,13 @@ slow_stop_flag = False
 def slow_stop(signum, _):
     global slow_stop_flag
 
-    Configuration.logger.info("Received %s signal. Slow stopping!" % signum)
+    Comunicator.info_logger("Received %s signal. Slow stopping!" % signum)
     slow_stop_flag = True
 
 
 def fast_stop():
     if Cracker.crt_process is not None:
-        Configuration.logger.info("Killing running process %s" % Cracker.crt_process.get_command())
+        Comunicator.info_logger("Killing running process %s" % Cracker.crt_process.get_command())
         # Kill currently running process
         Cracker.crt_process.terminate()
 
@@ -59,10 +59,10 @@ def fast_stop():
 
 def signal_handler(signum, _):
     if signum == signal.SIGINT or signum == signal.SIGTERM:
-        Configuration.logger.info("Received signal %d. Exitting!" % signum)
+        Comunicator.info_logger("Received signal %d. Exitting!" % signum)
         fast_stop()
     else:
-        Configuration.logger.info("Received %s signal" % signum)
+        Comunicator.info_logger("Received %s signal" % signum)
 
 
 class Cracker:
@@ -189,14 +189,13 @@ class Cracker:
             eta = "Calculating ETA"
         elif Cracker.eta_dict["eta"] != "" and Cracker.eta_dict["eta"] != "(0 secs)":
             eta = Cracker.eta_dict["eta"]
-        elif Cracker.eta_dict["speed"] != "" and Cracker.eta_dict["progress"] != -1:
+        elif Cracker.eta_dict["speed"] != -1 and Cracker.eta_dict["progress"] != -1:
             # For rules generated at runtime with variable base dictionary length we cannot calculate ETA
-            # TODO speed could be in kH - adjust for that
-            speed = int(Configuration.atoi_regex.match(Cracker.eta_dict["speed"]).group())
+            speed = Cracker.eta_dict["speed"]
             if speed != 0:
                 if Cracker.crt_rule["wordsize"] < Cracker.eta_dict["progress"]:
-                    Configuration.logger.error("Dict size (%d) seems less than current attacked (%d)" %
-                                               (Cracker.crt_rule["wordsize"], Cracker.eta_dict["progress"]))
+                    Comunicator.error_logger("Dict size (%d) seems less than current attacked (%d)" %
+                                             (Cracker.crt_rule["wordsize"], Cracker.eta_dict["progress"]))
 
                 eta_seconds = (Cracker.crt_rule["wordsize"] - Cracker.eta_dict["progress"]) / speed
                 eta = Cracker.seconds_to_time(eta_seconds)
@@ -228,14 +227,14 @@ class Cracker:
                     os.remove(Configuration.save_result_filename)
 
                 if res is False:
-                    Configuration.logger.warning("Server cancelled last job. Requesting stopwork.")
+                    Comunicator.warning_logger("Server cancelled last job. Requesting stopwork.")
                     Cracker.req.stopwork()
 
                 break
             except Cracker.req.ServerDown:
                 if not written_flag:
                     msg = "Trying to send result '%s' for last job but the server is unreachable" % password
-                    Configuration.dual_print(Configuration.logger.warning, msg)
+                    Comunicator.dual_printer(Comunicator.logger.warning, msg)
                     written_flag = True
                     with open(Configuration.save_result_filename, "w") as fp:
                         fp.write(password)
@@ -247,7 +246,8 @@ class Cracker:
         Comunicator.disable()
 
         # Check if process exited cleanly
-        Cracker.crt_process.check_clean_exit()
+        if Cracker.crt_process is not None:
+            Cracker.crt_process.check_clean_exit()
         show_stdout = list(filter(None, SingleProcess(Cracker.attack_command +
                                                       " --show").split_stdout()))
         password = ""
@@ -259,12 +259,18 @@ class Cracker:
                 die(cracked_obj is None, "REGEX error! could not match the --show line:%s" % show_stdout)
                 password = cracked_obj.group(1)
 
+        msg = "[FAIL] Password for '%s' is not contained in rule '%s'" %\
+              (Cracker.mac_ssid_job, Cracker.crt_rule["name"])
+        if len(password) > 7:
+            msg = "[SUCCESS] The password for '%s' is '%s'" % (Cracker.mac_ssid_job, password)
+
+        Comunicator.printer(msg)
         Cracker.safe_send_result(password)
 
         Cracker.clean_variables()
 
     @staticmethod
-    def is_potfile_duplicated(command):
+    def is_already_cracked(command):
         show_stdout = list(filter(None, SingleProcess(command + " --show").split_stdout()))
 
         if len(show_stdout) > 0:
@@ -276,7 +282,7 @@ class Cracker:
         Cracker.mac_ssid_job = "%s-%s" % (work["handshake"]["mac"], work["handshake"]["ssid"])
         msg = "Running '%s' with rule '%s'" % (Cracker.mac_ssid_job, work["rule"]["name"])
         Comunicator.enable(interactive=False)
-        Comunicator.dual_printer(msg, Configuration.logger.info)
+        Comunicator.dual_printer(Comunicator.logger.info, msg)
 
         _, Cracker.path_temp_file = mkstemp(prefix="psknow_crack")
 
@@ -297,13 +303,14 @@ class Cracker:
         generator_command, Cracker.attack_command, Cracker.scrambler =\
             Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_file, work["handshake"]["ssid"])
 
-        Configuration.logger.info("Trying rule %s on '%s-%s'" %
-                                  (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))
+        Comunicator.info_logger("Trying rule %s on '%s-%s'" %
+                                (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))
 
-        if Cracker.is_potfile_duplicated(Cracker.attack_command):
-            msg = "Duplication for %s happened. It is already present in potfile!" % Cracker.mac_ssid_job
-            Configuration.dual_print(Configuration.logger.critical, msg)
-            fast_stop()
+        if Cracker.is_already_cracked(Cracker.attack_command):
+            Comunicator.warning_logger("'%s' has already been cracked. Attempting to send result." %
+                                       Cracker.mac_ssid_job)
+            Cracker.process_result()
+            return
 
         if generator_command == "":
             Cracker.crt_process = SingleProcess(Cracker.attack_command)
@@ -322,7 +329,7 @@ class Cracker:
             return
 
         if slow_stop_flag:
-            Configuration.logger.info("Slow shutdown signal received - shutting down!")
+            Comunicator.info_logger("Slow shutdown signal received - shutting down!")
             sys.exit(0)
 
         # Before getting more work make sure we are up to date
@@ -339,12 +346,12 @@ class Cracker:
 
         # No work to be done right now
         if work is None:
-            print("No work to be done, checking in 10 seconds again.")
+            Comunicator.printer("No work to be done, checking in 10 seconds again.")
             return
 
         # Redundant check
         if work is False:
-            Configuration.dual_print(Configuration.logger.warning, "Capabilities out of date!")
+            Comunicator.warning_logger("Capabilities out of date!")
             return
 
         Cracker.start_cracking(work)
@@ -364,9 +371,10 @@ class Cracker:
 
         for missing in missings:
             if missing["type"] == "program":
-                Configuration.dual_print(Configuration.logger.info, "Please install program '%s'" % missing["name"])
+                Comunicator.info_logger("Please install program '%s'" % missing["name"])
             elif missing["type"] in ["dict", "maskfile", "generator", "john-local.conf"]:
-                Configuration.dual_print(Configuration.logger.info, "Downloading '%s'..." % missing["path"])
+
+                Comunicator.info_logger("Downloading '%s'..." % missing["path"])
 
                 gather_flag = True
 
@@ -381,13 +389,13 @@ class Cracker:
                 try:
                     if Cracker.req.checkfile(filename) is None and \
                             Cracker.req.getfile(filename, missing["path"]) is None:
-                        Configuration.dual_print(Configuration.logger.info, "Downloaded '%s'" % missing["path"])
+                        Comunicator.info_logger("Downloaded '%s'" % missing["path"])
                         if missing["type"] == "generator":
                             os.chmod(missing["path"], stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 except Cracker.req.ServerDown:
                     return
             else:
-                Configuration.dual_print(Configuration.logger.warning, "Unknown missing type '%s'" % missing)
+                Comunicator.warning_logger("Unknown missing type '%s'" % missing)
 
         if gather_flag:
             Configuration.gather_capabilities()
@@ -410,12 +418,58 @@ class Cracker:
         return
 
     @staticmethod
+    def print_status():
+        def pad(msg):
+            width = 13
+            return msg.ljust(width, '.') + ": "
+
+        def human_format(num):
+            magnitude = 0
+            while abs(num) >= 1000:
+                magnitude += 1
+                num /= 1000.0
+            # add more suffixes if you need them
+            return '%.1f%sH/s' % (num, ['', 'K', 'M', 'G', 'T', 'P'][magnitude])
+
+        def space_format(num):
+            return f'{num:,}'
+
+        hashcat_status = Cracker.crt_process.get_dict()
+        output = pad("Current rule") + "%s\n" % Cracker.crt_rule["name"]
+        eta = hashcat_status["eta"]
+        if hashcat_status["eta"] == "":
+            eta = "Calculating"
+        output += pad("Eta") + "%s\n" % eta
+
+        if hashcat_status["speed"] > 0:
+            if len(hashcat_status["devices"]) > 2:
+                total_speed = -1
+                for idx, speed in enumerate(sorted(hashcat_status["devices"].keys())):
+                    if total_speed == -1:
+                        total_speed = speed
+                        continue
+                    output += pad("Speed #%d" % idx) + "%s\n" % human_format(speed)
+                if total_speed != -1:
+                    output += pad("Total Speed") + "%s\n" % human_format(total_speed)
+            else:
+                output += pad("Total Speed") + "%s\n" % human_format(hashcat_status["speed"])
+
+        if hashcat_status["progress"] > 0:
+            progress_len = len(space_format(Cracker.crt_rule["wordsize"]))
+            output += pad("Progress") + "%s/%s\n" % (space_format(hashcat_status["progress"]).rjust(progress_len, ' '),
+                                                     space_format(Cracker.crt_rule["wordsize"]))
+
+        if output.endswith("\n"):
+            output = output[:-1]
+
+        Comunicator.printer(output)
+
+    @staticmethod
     def parse_command(cmd):
         global slow_stop_flag
 
         if cmd == 's':
-            # TODO get hashcat status
-            pass  # status
+            Cracker.print_status()
         elif cmd == 'q':
             Comunicator.printer("Stopping...", reprint=False)
             fast_stop()
@@ -445,24 +499,24 @@ class Cracker:
 
     @staticmethod
     def run():
-        Configuration.initialize()
-        Cracker.crt_workload = 4  # TODO get value from parameters, adjust from keyboard
+        Comunicator.initialize()
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        Cracker.req = Requester(Configuration.apikey, Comunicator.error_printer)
+        Configuration.initialize()
+        Cracker.crt_workload = 4  # TODO get value from parameters, adjust from keyboard
+
+        Cracker.req = Requester(Configuration.apikey, Comunicator.error_logger)
 
         Cracker.resume_work()
 
-        Comunicator.initialize()
-
         Comunicator.printer("Cracker initialized", reprint=False)
 
-        # Disable terminal echo
-        os.system("stty -echo")
-
         try:
+            # Disable terminal echo
+            os.system("stty -echo")
+
             last_time = None
             while True:
                 now_time = datetime.now()
@@ -475,10 +529,8 @@ class Cracker:
                     Cracker.parse_command(cmd)
                 sleep(0.1)
         except Exception as e:
-            Configuration.dual_print(Configuration.logger.critical,
-                                     "Caught unexpected exception: '%s'" % (traceback.format_exc()))
             Cracker.clean_variables()
-            die(True, e)
+            Comunicator.fatal_debug_printer("Caught unexpected exception: '%s' '%s'" % (e, traceback.format_exc()))
         finally:
             # Reenable terminal echo
             os.system("stty echo")

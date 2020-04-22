@@ -6,6 +6,8 @@ import signal
 import os
 import sys
 import traceback
+
+from comunicator import Comunicator
 from config import Configuration
 from copy import deepcopy
 from threading import Thread
@@ -51,7 +53,7 @@ class NoProcess:
             if type(cmd) is list:
                 cmd = ' '.join(cmd)
 
-            Configuration.logger.info('sending interrupt to PID %d (%s)' % (pid, cmd))
+            Comunicator.info_logger('sending interrupt to PID %d (%s)' % (pid, cmd))
 
             if wait_time == 0.0:
                 os.kill(pid, signal.SIGTERM)
@@ -66,7 +68,7 @@ class NoProcess:
                 time.sleep(0.1)
                 if time.time() - start_time > wait_time:
                     # We waited too long for process to die, terminate it.
-                    Configuration.logger.info('Waited > %0.2f seconds for process to die, killing it' % wait_time)
+                    Comunicator.info_logger('Waited > %0.2f seconds for process to die, killing it' % wait_time)
                     os.kill(pid, signal.SIGTERM)
                     process.terminate()
                     break
@@ -83,8 +85,28 @@ class NoProcess:
         read_pipe.close()
 
     @staticmethod
-    def _hashcat_out_thread(read_pipe, output_list, hashcat_progress):
+    def _hashcat_out_thread(read_pipe, output_list, hashcat_progress, process_object):
+        multiple_devices = False
+        # TODO implement time estimation for maskfiles
+        guess_queue_flag = False
+
         for line in read_pipe:
+            output_list.append(line)
+
+            if "[s]tatus" in line:
+                process_object.cracking_started = True
+                continue
+
+            # TODO implement time estimation for maskfiles
+            match = Configuration.hashcat_guess_re.match(line)
+            if match is not None:
+                guess_queue_num = int(match.group(1))
+                if guess_queue_num > 1:
+                    guess_queue_flag = True
+
+            with open("file", "a") as fd:
+                fd.write(line)
+
             match = Configuration.hashcat_progress_re.match(line)
             if match is not None:
                 hashcat_progress["progress"] = int(match.group(1))
@@ -93,11 +115,41 @@ class NoProcess:
             if match is not None:
                 hashcat_progress["eta"] = match.group(1)
 
+            if guess_queue_flag:
+                hashcat_progress["eta"] = "Unable to estimate for current rule"
+                hashcat_progress["progress"] = -1
+
             match = Configuration.hashcat_speed_re.match(line)
             if match is not None:
-                hashcat_progress["speed"] = match.group(1)
+                str_speed, str_modifier = match.group(2).split()
 
-            output_list.append(line)
+                if str_modifier[0].lower() == 'h':
+                    modifier = 1
+                elif str_modifier[0].lower() == 'k':
+                    modifier = 1000
+                elif str_modifier[0].lower() == 'm':
+                    modifier = 1000000
+                elif str_modifier[0].lower() == 'g':
+                    modifier = 1000000000
+                else:
+                    modifier = None
+                    Comunicator.fatal_debug_printer("Error parsing hashcat speed on line '%s'" % line)
+                speed = int(float(str_speed) * modifier)
+
+                device = match.group(1).rstrip('.').lstrip('.')[1:]
+
+                if device[0] == '*':
+                    multiple_devices = True
+                    hashcat_progress["devices"][0] = speed
+                else:
+                    devnum = int(device)
+                    if devnum > 1:
+                        multiple_devices = True
+                    hashcat_progress["devices"][devnum] = speed
+
+                if not multiple_devices:
+                    hashcat_progress["devices"][0] = hashcat_progress["devices"][1]
+                hashcat_progress["speed"] = hashcat_progress["devices"][0]
         read_pipe.close()
 
     @staticmethod
@@ -105,6 +157,7 @@ class NoProcess:
         return traceback.extract_stack(None, 2)[0][2]
 
     def __init__(self):
+        self.cracking_started = False
         self.hashcat_progress = deepcopy(Configuration.default_hashcat_dict)
 
     def get_dict(self):
@@ -136,8 +189,8 @@ class DoubleProcess(NoProcess):
     def __init__(self, fst_cmd, snd_cmd, crit=True):
         super(DoubleProcess, self).__init__()
         if len(fst_cmd) == 0 or len(snd_cmd) == 0:
-            Configuration.log_fatal("One empty command in chained processes '%s' | '%s'" %
-                                    (fst_cmd, snd_cmd))
+            Comunicator.fatal_debug_printer("One empty command in chained processes '%s' | '%s'" %
+                                            (fst_cmd, snd_cmd))
 
         self.critical = crit
         self.ended = False
@@ -150,7 +203,7 @@ class DoubleProcess(NoProcess):
         disp1 = fst_cmd if type(fst_cmd) is str else " ".join(fst_cmd)
         disp2 = snd_cmd if type(snd_cmd) is str else " ".join(snd_cmd)
 
-        Configuration.logger.debug("Executing chained commands: '%s | %s'" % (disp1, disp2))
+        Comunicator.debug_logger("Executing chained commands: '%s | %s'" % (disp1, disp2))
 
         # Output variables need to be mutable in order to modify them
         # from generic thread
@@ -178,7 +231,7 @@ class DoubleProcess(NoProcess):
 
         if DoubleProcess.command_is_hashcat(self.snd_cmd):
             self.snd_out_reader_thread = Thread(target=self._hashcat_out_thread,
-                                                args=(self.snd_out_r, self.snd_out, self.hashcat_progress))
+                                                args=(self.snd_out_r, self.snd_out, self.hashcat_progress, self))
         else:
             self.snd_out_reader_thread = Thread(target=self._all_reader_thread, args=(self.snd_out_r, self.snd_out))
 
@@ -187,7 +240,7 @@ class DoubleProcess(NoProcess):
         try:
             self.snd_proc = Popen(snd_cmd, stdin=self.comm_r, stdout=self.snd_out_w, stderr=self.snd_err_w)
         except Exception as e:
-            Configuration.log_fatal("Error while trying to run command '%s':\n%s" % (snd_cmd, e))
+            Comunicator.fatal_debug_printer("Error while trying to run command '%s':\n%s" % (snd_cmd, e))
 
         if type(fst_cmd) is str:
             fst_cmd = fst_cmd.split(' ')
@@ -195,7 +248,7 @@ class DoubleProcess(NoProcess):
             self.fst_proc = Popen(fst_cmd, stdin=DoubleProcess.get_devnull_r(),
                                   stdout=self.comm_w, stderr=self.fst_err_w)
         except Exception as e:
-            Configuration.log_fatal("Error while trying to run command '%s':\n%s" % (fst_cmd, e))
+            Comunicator.fatal_debug_printer("Error while trying to run command '%s':\n%s" % (fst_cmd, e))
 
         self.fst_err_reader_thread.start()
         self.snd_err_reader_thread.start()
@@ -249,7 +302,7 @@ class DoubleProcess(NoProcess):
             self.snd_err_r = self.snd_out_r = self.fst_err_r = None
 
         except AttributeError as e:
-            Configuration.logger.error("Attribute error raised %s" % e)
+            Comunicator.error_logger("Attribute error raised %s" % e)
             pass
 
     # Check if the first process is ready to be stopped
@@ -283,10 +336,10 @@ class DoubleProcess(NoProcess):
 
             # TODO this can be generic. If this becomes static the poll needs to be checked against None
             if self.critical and self.fst_proc.poll() != 0:
-                Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
-                                             (self.fst_cmd, self.fst_proc.poll(), None))
+                Comunicator.error_logger("First process %s exited with status %d. Stderr:\n%s" %
+                                         (self.fst_cmd, self.fst_proc.poll(), self.fst_err))
                 self._force_cleanup()
-                sys.exit(self.fst_proc.poll())
+                Comunicator.fatal_debug_printer("Fatal error encountered in critical first process. See logs.")
 
             return True
         return False
@@ -330,10 +383,10 @@ class DoubleProcess(NoProcess):
             if self.critical and self.snd_proc.poll() != 0:
                 # Second process could be hashcat which sometimes returns 1 but no error
                 if DoubleProcess.command_is_hashcat(self.snd_cmd) and self.snd_proc.poll() != 1:
-                    Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
-                                                 (self.snd_cmd, self.snd_proc.poll(), self.snd_err))
+                    Comunicator.debug_logger("Second process %s exited with status %d. Stderr:\n%s" %
+                                             (self.snd_cmd, self.snd_proc.poll(), self.snd_err))
                     self._force_cleanup()
-                    sys.exit(self.snd_proc.poll())
+                    Comunicator.fatal_debug_printer("Fatal error encountered in critical second process. See logs.")
 
             return True
 
@@ -365,22 +418,23 @@ class DoubleProcess(NoProcess):
 class SingleProcess(NoProcess):
     def ___hashcat_writer_thread(self, write_pipe):
         old_time = time.time()
+        first_status_sent = False
 
         while not self.stop_in_thread:
-            if time.time() - old_time > 30:
+            if (not first_status_sent and self.cracking_started) or (time.time() - old_time > 10):
+                first_status_sent = True
                 old_time = time.time()
                 if write_pipe:
                     write_pipe.write("s")
                     write_pipe.flush()
-            else:
-                time.sleep(1)
+            time.sleep(1)
 
         write_pipe.close()
 
     def __init__(self, cmd, crit=True, nolog=False):
         super(SingleProcess, self).__init__()
         if len(cmd) == 0:
-            Configuration.log_fatal("Empty command '%s' send to SingleProcess" % cmd)
+            Comunicator.fatal_debug_printer("Empty command '%s' send to SingleProcess" % cmd)
 
         self.critical = crit
 
@@ -389,9 +443,9 @@ class SingleProcess(NoProcess):
 
         if not nolog:
             if type(cmd) is str:
-                Configuration.logger.debug("Executing command: '%s'" % self.cmd)
+                Comunicator.info_logger("Executing command: '%s'" % self.cmd)
             else:
-                Configuration.logger.debug("Executing command: '%s'" % " ".join(self.cmd))
+                Comunicator.info_logger("Executing command: '%s'" % " ".join(self.cmd))
 
         # Output variables need to be mutable in order to modify them
         # from generic thread
@@ -421,7 +475,7 @@ class SingleProcess(NoProcess):
             self.in_w.write("s")
             self.in_writer_thread = Thread(target=self.___hashcat_writer_thread, args=(self.in_w,))
             self.out_reader_thread = Thread(target=self._hashcat_out_thread,
-                                            args=(self.out_r, self.out, self.hashcat_progress))
+                                            args=(self.out_r, self.out, self.hashcat_progress, self))
         else:
             self.out_reader_thread = Thread(target=self._all_reader_thread, args=(self.out_r, self.out))
 
@@ -430,7 +484,7 @@ class SingleProcess(NoProcess):
         try:
             self.proc = Popen(cmd, stdin=self.in_r, stdout=self.out_w, stderr=self.err_w)
         except Exception as e:
-            Configuration.log_fatal("Error while trying to run command '%s':\n%s" % (cmd, e))
+            Comunicator.fatal_debug_printer("Error while trying to run command '%s':\n%s" % (cmd, e))
 
         if self.in_writer_thread is not None:
             self.in_writer_thread.start()
@@ -482,7 +536,7 @@ class SingleProcess(NoProcess):
             self.in_r = SingleProcess._close_helper(self.in_r)[0]
 
         except AttributeError as e:
-            Configuration.logger.error("Attribute error raised %s" % e)
+            Comunicator.error_logger("Attribute error raised %s" % e)
             pass
 
     # Check if the process is ready to be stopped
@@ -521,10 +575,10 @@ class SingleProcess(NoProcess):
             if self.critical and self.proc.poll() != 0:
                 # Second process could be hashcat which sometimes returns 1 but no error
                 if SingleProcess.command_is_hashcat(self.cmd) and self.proc.poll() != 1:
-                    Configuration.logger.debug("Process %s exited with status %d. Stderr:\n%s" %
-                                                 (self.cmd, self.proc.poll(), self.err))
+                    Comunicator.debug_logger("Process %s exited with status %d. Stderr:\n%s" %
+                                             (self.cmd, self.proc.poll(), self.err))
                     self._force_cleanup()
-                    sys.exit(self.proc.poll())
+                    Comunicator.fatal_debug_printer("Fatal error encountered in critical single process. See logs.")
 
             return True
         return False

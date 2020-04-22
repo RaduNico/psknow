@@ -4,15 +4,18 @@ import os
 import json
 import hashlib
 
-from time import sleep
 from pymongo import MongoClient
 from copy import deepcopy
 from secrets import token_urlsafe
+from shutil import which
 from threading import Lock
 
 
 class Configuration(object):
     static_folder = "static"
+
+    # Dependencies
+    crit_deps = ["hcxpcaptool", "hashcat", "aircrack-ng"]
 
     # Database Variables
     database_location = '127.0.0.1:27017'
@@ -198,23 +201,38 @@ class Configuration(object):
 
     @staticmethod
     def log_fatal(message):
+        print(message)
         Configuration.logger.critical(message)
-        sleep(10)
         sys.exit(-1)
+
+    @staticmethod
+    def get_connection():
+        if Configuration.login_with_credentials:
+            conn_loc = "mongodb://%s:%s@%s/%s" % \
+                       (Configuration.db_username, Configuration.db_password,
+                        Configuration.database_location, Configuration.database_name)
+        else:
+            conn_loc = "mongodb://%s/%s" % \
+                       (Configuration.database_location, Configuration.database_name)
+        Configuration.logger.debug("Connecting at %s" % conn_loc)
+        Configuration.logger.debug("Connecting at %s" % conn_loc)
+
+        return MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
+
+    @staticmethod
+    def check_preinit_dbconn():
+        try:
+            Configuration.conn = Configuration.get_connection()
+            Configuration.check_db_conn()
+            Configuration.conn = None
+        except Exception as e:
+            Configuration.log_fatal("Could not establish initial database connection. Error '%s'" % e)
 
     @staticmethod
     def database_conection():
         try:
-            if Configuration.login_with_credentials:
-                conn_loc = "mongodb://%s:%s@%s/%s" %\
-                           (Configuration.db_username, Configuration.db_password,
-                            Configuration.database_location, Configuration.database_name)
-            else:
-                conn_loc = "mongodb://%s/%s" %\
-                           (Configuration.database_location, Configuration.database_name)
-            Configuration.logger.debug("Connecting at %s" % conn_loc)
+            Configuration.conn = Configuration.get_connection()
 
-            Configuration.conn = MongoClient(conn_loc, serverSelectionTimeoutMS=10, connectTimeoutMS=20)
             Configuration.db = Configuration.conn[Configuration.database_name]
             Configuration.wifis = Configuration.db["wifis"]
             Configuration.users = Configuration.db["users"]
@@ -222,7 +240,17 @@ class Configuration(object):
             Configuration.retired = Configuration.db["retired"]
             Configuration.check_db_conn()
         except Exception as e:
-            Configuration.log_fatal("Could not establish initial connection with error %s" % e)
+            Configuration.log_fatal("Could not establish database connection. Error '%s'" % e)
+
+    @staticmethod
+    def check_program_installed(name):
+        return which(name) is not None
+
+    @staticmethod
+    def check_critical():
+        for crit_dep in Configuration.crit_deps:
+            if not Configuration.check_program_installed(crit_dep):
+                Configuration.log_fatal("Please install '%s' in order to run psknow-backend" % crit_dep)
 
     @staticmethod
     def read_rules():
@@ -352,6 +380,9 @@ class Configuration(object):
     def preinitialize(server):
         Configuration.logger = server.log
 
+        # Check critical dependecies
+        Configuration.check_critical()
+
         # Read rule data
         Configuration.read_rules()
 
@@ -366,6 +397,9 @@ class Configuration(object):
         # Make sure the pot_path is empty
         with open(Configuration.empty_pot_path, "w") as _:
             pass
+
+        # Check that database is up and running
+        Configuration.check_preinit_dbconn()
 
     @staticmethod
     def check_db_conn():
