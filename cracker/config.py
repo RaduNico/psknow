@@ -27,7 +27,7 @@ class Configuration(object):
     sha1s_filename = "crack/sha1s.txt"
     save_result_filename = "crack/saveresult.txt"
 
-    default_hashcat_dict = {"progress": -1, "eta": "", "speed": ""}
+    default_hashcat_dict = {"progress": -1, "eta": "", "speed": -1, "devices":dict()}
 
     # Cracking paths
     attack_path = 'crack'
@@ -37,9 +37,10 @@ class Configuration(object):
     hashcat_show_regex = re.compile("[0-9a-f]*:[0-9a-f]{12}:.*[:*](.*)[\n]?$")
     atoi_regex = re.compile(" *[-]?[0-9]*")
 
-    hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]*)$")
+    hashcat_guess_re = re.compile("^Guess\.Queue[.]{6}: [0-9]+/([0-9]]+)")
+    hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]+)")
     hashcat_eta_re = re.compile("^Time[.]Estimated[.]{3}: [A-Za-z0-9: ]* ([(].*[)])$")
-    hashcat_speed_re = re.compile("^Speed[.]#1[.]{9}:[ ]+([0-9]* ?.?H/s)")
+    hashcat_speed_re = re.compile("^Speed(.*?):[ ]+([0-9]*\.[0-9]* .?H/s)")
 
     # Cracking variables
     hot_words = ["parola", "password", "wifi"]  # TODO get those from server

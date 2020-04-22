@@ -85,8 +85,28 @@ class NoProcess:
         read_pipe.close()
 
     @staticmethod
-    def _hashcat_out_thread(read_pipe, output_list, hashcat_progress):
+    def _hashcat_out_thread(read_pipe, output_list, hashcat_progress, process_object):
+        multiple_devices = False
+        # TODO implement time estimation for maskfiles
+        guess_queue_flag = False
+
         for line in read_pipe:
+            output_list.append(line)
+
+            if "[s]tatus" in line:
+                process_object.cracking_started = True
+                continue
+
+            # TODO implement time estimation for maskfiles
+            match = Configuration.hashcat_guess_re.match(line)
+            if match is not None:
+                guess_queue_num = int(match.group(1))
+                if guess_queue_num > 1:
+                    guess_queue_flag = True
+
+            with open("file", "a") as fd:
+                fd.write(line)
+
             match = Configuration.hashcat_progress_re.match(line)
             if match is not None:
                 hashcat_progress["progress"] = int(match.group(1))
@@ -95,11 +115,41 @@ class NoProcess:
             if match is not None:
                 hashcat_progress["eta"] = match.group(1)
 
+            if guess_queue_flag:
+                hashcat_progress["eta"] = "Unable to estimate for current rule"
+                hashcat_progress["progress"] = -1
+
             match = Configuration.hashcat_speed_re.match(line)
             if match is not None:
-                hashcat_progress["speed"] = match.group(1)
+                str_speed, str_modifier = match.group(2).split()
 
-            output_list.append(line)
+                if str_modifier[0].lower() == 'h':
+                    modifier = 1
+                elif str_modifier[0].lower() == 'k':
+                    modifier = 1000
+                elif str_modifier[0].lower() == 'm':
+                    modifier = 1000000
+                elif str_modifier[0].lower() == 'g':
+                    modifier = 1000000000
+                else:
+                    modifier = None
+                    Comunicator.fatal_debug_printer("Error parsing hashcat speed on line '%s'" % line)
+                speed = int(float(str_speed) * modifier)
+
+                device = match.group(1).rstrip('.').lstrip('.')[1:]
+
+                if device[0] == '*':
+                    multiple_devices = True
+                    hashcat_progress["devices"][0] = speed
+                else:
+                    devnum = int(device)
+                    if devnum > 1:
+                        multiple_devices = True
+                    hashcat_progress["devices"][devnum] = speed
+
+                if not multiple_devices:
+                    hashcat_progress["devices"][0] = hashcat_progress["devices"][1]
+                hashcat_progress["speed"] = hashcat_progress["devices"][0]
         read_pipe.close()
 
     @staticmethod
@@ -107,6 +157,7 @@ class NoProcess:
         return traceback.extract_stack(None, 2)[0][2]
 
     def __init__(self):
+        self.cracking_started = False
         self.hashcat_progress = deepcopy(Configuration.default_hashcat_dict)
 
     def get_dict(self):
@@ -180,7 +231,7 @@ class DoubleProcess(NoProcess):
 
         if DoubleProcess.command_is_hashcat(self.snd_cmd):
             self.snd_out_reader_thread = Thread(target=self._hashcat_out_thread,
-                                                args=(self.snd_out_r, self.snd_out, self.hashcat_progress))
+                                                args=(self.snd_out_r, self.snd_out, self.hashcat_progress, self))
         else:
             self.snd_out_reader_thread = Thread(target=self._all_reader_thread, args=(self.snd_out_r, self.snd_out))
 
@@ -367,15 +418,16 @@ class DoubleProcess(NoProcess):
 class SingleProcess(NoProcess):
     def ___hashcat_writer_thread(self, write_pipe):
         old_time = time.time()
+        first_status_sent = False
 
         while not self.stop_in_thread:
-            if time.time() - old_time > 30:
+            if (not first_status_sent and self.cracking_started) or (time.time() - old_time > 10):
+                first_status_sent = True
                 old_time = time.time()
                 if write_pipe:
                     write_pipe.write("s")
                     write_pipe.flush()
-            else:
-                time.sleep(1)
+            time.sleep(1)
 
         write_pipe.close()
 
@@ -423,7 +475,7 @@ class SingleProcess(NoProcess):
             self.in_w.write("s")
             self.in_writer_thread = Thread(target=self.___hashcat_writer_thread, args=(self.in_w,))
             self.out_reader_thread = Thread(target=self._hashcat_out_thread,
-                                            args=(self.out_r, self.out, self.hashcat_progress))
+                                            args=(self.out_r, self.out, self.hashcat_progress, self))
         else:
             self.out_reader_thread = Thread(target=self._all_reader_thread, args=(self.out_r, self.out))
 

@@ -189,10 +189,9 @@ class Cracker:
             eta = "Calculating ETA"
         elif Cracker.eta_dict["eta"] != "" and Cracker.eta_dict["eta"] != "(0 secs)":
             eta = Cracker.eta_dict["eta"]
-        elif Cracker.eta_dict["speed"] != "" and Cracker.eta_dict["progress"] != -1:
+        elif Cracker.eta_dict["speed"] != -1 and Cracker.eta_dict["progress"] != -1:
             # For rules generated at runtime with variable base dictionary length we cannot calculate ETA
-            # TODO speed could be in kH - adjust for that
-            speed = int(Configuration.atoi_regex.match(Cracker.eta_dict["speed"]).group())
+            speed = Cracker.eta_dict["speed"]
             if speed != 0:
                 if Cracker.crt_rule["wordsize"] < Cracker.eta_dict["progress"]:
                     Comunicator.error_logger("Dict size (%d) seems less than current attacked (%d)" %
@@ -419,12 +418,58 @@ class Cracker:
         return
 
     @staticmethod
+    def print_status():
+        def pad(msg):
+            width = 13
+            return msg.ljust(width, '.') + ": "
+
+        def human_format(num):
+            magnitude = 0
+            while abs(num) >= 1000:
+                magnitude += 1
+                num /= 1000.0
+            # add more suffixes if you need them
+            return '%.1f%sH/s' % (num, ['', 'K', 'M', 'G', 'T', 'P'][magnitude])
+
+        def space_format(num):
+            return f'{num:,}'
+
+        hashcat_status = Cracker.crt_process.get_dict()
+        output = pad("Current rule") + "%s\n" % Cracker.crt_rule["name"]
+        eta = hashcat_status["eta"]
+        if hashcat_status["eta"] == "":
+            eta = "Calculating"
+        output += pad("Eta") + "%s\n" % eta
+
+        if hashcat_status["speed"] > 0:
+            if len(hashcat_status["devices"]) > 2:
+                total_speed = -1
+                for idx, speed in enumerate(sorted(hashcat_status["devices"].keys())):
+                    if total_speed == -1:
+                        total_speed = speed
+                        continue
+                    output += pad("Speed #%d" % idx) + "%s\n" % human_format(speed)
+                if total_speed != -1:
+                    output += pad("Total Speed") + "%s\n" % human_format(total_speed)
+            else:
+                output += pad("Total Speed") + "%s\n" % human_format(hashcat_status["speed"])
+
+        if hashcat_status["progress"] > 0:
+            progress_len = len(space_format(Cracker.crt_rule["wordsize"]))
+            output += pad("Progress") + "%s/%s\n" % (space_format(hashcat_status["progress"]).rjust(progress_len, ' '),
+                                                     space_format(Cracker.crt_rule["wordsize"]))
+
+        if output.endswith("\n"):
+            output = output[:-1]
+
+        Comunicator.printer(output)
+
+    @staticmethod
     def parse_command(cmd):
         global slow_stop_flag
 
         if cmd == 's':
-            # TODO get hashcat status
-            pass  # status
+            Cracker.print_status()
         elif cmd == 'q':
             Comunicator.printer("Stopping...", reprint=False)
             fast_stop()
