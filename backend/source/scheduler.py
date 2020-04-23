@@ -190,7 +190,7 @@ class Scheduler:
     def get_next_handshake(apikey, client_capabilities):
         task = deepcopy(Scheduler.default_task)
 
-        query = {"handshake.open": False, "reserved_by": None, "handshake.password": "",
+        query = {"handshake.open": False, "reserved": None, "handshake.password": "",
                  "handshake.tried_dicts.%s" % (Configuration.number_rules - 1): {"$exists": False}}
 
         # Avoid sending error if the wifis collection was not created yet.
