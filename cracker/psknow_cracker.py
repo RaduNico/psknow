@@ -79,6 +79,8 @@ class Cracker:
     path_temp_file = None
     crt_workload = None
 
+    capabilities_tested = False
+
     req = None
 
     @staticmethod
@@ -334,6 +336,11 @@ class Cracker:
 
         # Before getting more work make sure we are up to date
         Cracker.complete_missing()
+
+        # Test capabilities once
+        if not Cracker.capabilities_tested:
+            Configuration.test_capabilities()
+            Cracker.capabilities_tested = True
 
         # Nothing is running - getting more work
         try:

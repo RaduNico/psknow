@@ -3,8 +3,11 @@ import re
 import os
 import hashlib
 import json
+
+from tempfile import mkstemp
 from shutil import which
 from comunicator import Comunicator
+from process import SingleProcess
 
 
 class Configuration(object):
@@ -19,7 +22,7 @@ class Configuration(object):
     # Remote location info
     remote_server = None
 
-    capabilities = []
+    capabilities = dict()
     capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
     programs = ["hashcat", "john"]
 
@@ -76,6 +79,72 @@ class Configuration(object):
         return flag
 
     @staticmethod
+    def test_john():
+        """
+            Function that tests if john the ripper properly works
+            Tests if john can be run and if the setting for running local config files is active
+
+        :return:
+            True if john the ripper properly works
+            "<ERROR>" otherwise
+        """
+        # Test if regular john the ripper works
+        _, passwd_file = mkstemp(prefix="psknow_crack")
+
+        try:
+            with open(passwd_file, "w") as fd:
+                fd.write("password\n")
+
+            test_john_runs = "%s --wordlist=%s --stdout --rules=None" % (Configuration.john_path, passwd_file)
+            p = SingleProcess(test_john_runs, crit=False)
+
+            p.generate_output()
+            retcode = p.poll()
+            if retcode != 0:
+                return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" %\
+                       (test_john_runs, retcode, p.stdout(), p.stderr())
+
+            test_john_runs = "%s --wordlist=%s --stdout --rules=TestRulePSKnow" % (Configuration.john_path, passwd_file)
+            p = SingleProcess(test_john_runs, crit=False)
+
+            p.generate_output()
+            retcode = p.poll()
+            if 'No "TestRulePSKnow" mode rules found in' in p.stderr():
+                return "john-local.conf was not loaded by john. Check the configuration file '%s' and uncomment the" \
+                       " line `#.include './john-local.conf'`" % Configuration.john_path
+
+            if retcode != 0:
+                return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" % \
+                       (test_john_runs, retcode, p.stdout(), p.stderr())
+        except Exception as e:
+            raise e
+        finally:
+            os.remove(passwd_file)
+
+        return True
+
+    @staticmethod
+    def test_capabilities():
+        """
+            Test cracking capabilities and run dummy programs to check for errors
+            Removes capabilities from 'capabilities' if the test fails
+        :return:
+            None
+        """
+        if "john" in Configuration.capabilities:
+            res = Configuration.test_john()
+            if res is not True:
+                del Configuration.capabilities["john"]
+                Comunicator.dual_printer(Comunicator.logger.warn, "John is currently not available:\n%s" % res)
+
+        # if "hashcat" in Configuration.capabilities:
+        #     res = Configuration.test_hashcat()
+        #     if res is not True:
+        #         del Configuration.capabilities["hashcat"]
+        #         Comunicator.dual_printer(Comunicator.logger.warn, "Hashcat is not currently available: '%s'" % res)
+
+
+    @staticmethod
     def gather_capabilities():
         """
             Returns a dictionary of the client capabilities.
@@ -89,9 +158,9 @@ class Configuration(object):
             :return:
                 Dictionary as described above
         """
-        Configuration.capabilities = {}
         sha1_file_changed = False
 
+        # Check if local john configuration exists
         if os.path.isfile("john-local.conf") and Configuration.check_file("john-local.conf", "john-local.conf"):
             sha1_file_changed = True
 
