@@ -37,15 +37,14 @@ class Requester:
         """
         url = Configuration.remote_server + "getwork"
         Comunicator.info_logger("Requesting work from '%s'" % url)
+
+        response = None
         try:
             response = requests.post(url, json = {"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
-
-            
-
 
         data, err = Requester._decode_json(response)
         if err != "":
@@ -70,6 +69,8 @@ class Requester:
         """
         url = Configuration.remote_server + "stopwork"
         Comunicator.info_logger("Stopping work from '%s'" % url)
+
+        response = None
         try:
             response = requests.post(url, data={"apikey": self.apikey}, timeout = 10)
         except requests.exceptions.ConnectionError:
@@ -120,13 +121,14 @@ class Requester:
          """
         url = Configuration.remote_server + "sendeta"
         Comunicator.info_logger("Sending eta to '%s': '%s'" % (url, eta))
+
+        response = None
         try:
             response = requests.post(url, data={"apikey": self.apikey, "eta": eta}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
-
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -146,6 +148,7 @@ class Requester:
         url = Configuration.remote_server + "checkfile"
         Comunicator.info_logger("Checking if file '%s' exists at '%s'" % (filename, url))
 
+        response = None
         try:
             response = requests.post(url, data={"apikey": self.apikey, "file": filename}, timeout = 10)
         except requests.exceptions.ConnectionError:
@@ -200,13 +203,13 @@ class Requester:
         url = Configuration.remote_server + "getmissing"
         Comunicator.info_logger("Getting missing capabilites at '%s'" % url)
 
+        response = None
         try:
             response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
-
 
         data, err = Requester._decode_json(response)
         if err != "":
@@ -227,6 +230,8 @@ class Requester:
         """
         url = Configuration.remote_server + "sendresult"
         Comunicator.info_logger("Sending result at '%s'" % url)
+
+        response = None
         try:
             response = requests.post(url, data={"apikey": self.apikey, "password": password}, timeout = 10)
         except requests.exceptions.ConnectionError:
