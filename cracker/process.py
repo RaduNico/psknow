@@ -4,15 +4,21 @@
 import time
 import signal
 import os
-import sys
+import re
 import traceback
 
 from comunicator import Comunicator
-from config import Configuration
 from copy import deepcopy
 from threading import Thread
 from subprocess import Popen
 
+# Hashcat regexes
+default_hashcat_dict = {"progress": -1, "eta": "", "speed": -1, "devices": dict()}
+
+hashcat_guess_re = re.compile("^Guess\.Queue[.]{6}: [0-9]+/([0-9]]+)")
+hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]+)")
+hashcat_eta_re = re.compile("^Time[.]Estimated[.]{3}: [A-Za-z0-9: ]* ([(].*[)])$")
+hashcat_speed_re = re.compile("^Speed(.*?):[ ]+([0-9]*\.[0-9]* .?H/s)")
 
 class NoProcess:
     @staticmethod
@@ -98,7 +104,7 @@ class NoProcess:
                 continue
 
             # TODO implement time estimation for maskfiles
-            match = Configuration.hashcat_guess_re.match(line)
+            match = hashcat_guess_re.match(line)
             if match is not None:
                 guess_queue_num = int(match.group(1))
                 if guess_queue_num > 1:
@@ -107,11 +113,11 @@ class NoProcess:
             with open("file", "a") as fd:
                 fd.write(line)
 
-            match = Configuration.hashcat_progress_re.match(line)
+            match = hashcat_progress_re.match(line)
             if match is not None:
                 hashcat_progress["progress"] = int(match.group(1))
 
-            match = Configuration.hashcat_eta_re.match(line)
+            match = hashcat_eta_re.match(line)
             if match is not None:
                 hashcat_progress["eta"] = match.group(1)
 
@@ -119,7 +125,7 @@ class NoProcess:
                 hashcat_progress["eta"] = "Unable to estimate for current rule"
                 hashcat_progress["progress"] = -1
 
-            match = Configuration.hashcat_speed_re.match(line)
+            match = hashcat_speed_re.match(line)
             if match is not None:
                 str_speed, str_modifier = match.group(2).split()
 
@@ -160,7 +166,7 @@ class NoProcess:
 
     def __init__(self):
         self.cracking_started = False
-        self.hashcat_progress = deepcopy(Configuration.default_hashcat_dict)
+        self.hashcat_progress = deepcopy(default_hashcat_dict)
 
     def get_dict(self):
         raise ValueError("%s method not implemented!" % NoProcess.__func_name())
