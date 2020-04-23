@@ -373,9 +373,7 @@ class Cracker:
             if missing["type"] == "program":
                 Comunicator.info_logger("Please install program '%s'" % missing["name"])
             elif missing["type"] in ["dict", "maskfile", "generator", "john-local.conf"]:
-
-                Comunicator.info_logger("Downloading '%s'..." % missing["path"])
-
+                Comunicator.dual_printer(Comunicator.logger.info, "Downloading '%s'..." % missing["path"])
                 gather_flag = True
 
                 if "/" in missing["path"]:
@@ -389,7 +387,7 @@ class Cracker:
                 try:
                     if Cracker.req.checkfile(filename) is None and \
                             Cracker.req.getfile(filename, missing["path"]) is None:
-                        Comunicator.info_logger("Downloaded '%s'" % missing["path"])
+                        Comunicator.dual_printer(Comunicator.logger.info, "Downloaded '%s'" % missing["path"])
                         if missing["type"] == "generator":
                             os.chmod(missing["path"], stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 except Cracker.req.ServerDown:
