@@ -44,6 +44,7 @@ class Configuration(object):
 
     # Cracking variables
     hot_words = ["parola", "password", "wifi"]  # TODO get those from server
+    hashcat_workload = 4
 
     # Requester messages
     no_work_message = "No work to be done at the moment."
@@ -163,6 +164,8 @@ class Configuration(object):
                 error_string += err
                 Configuration.remote_server, err = load_key("server_location")
                 error_string += err
+                Configuration.hashcat_workload, err = load_key("hashcat_workload")
+                error_string += err
         except json.decoder.JSONDecodeError as e:
             Comunicator.fatal_regular_message("Configuration file '%s' is not a valid json with error '%s'. Fix"
                                       "file or completely remove to restore to default state." %
@@ -189,6 +192,16 @@ class Configuration(object):
         Configuration.remote_server += "api/v1/"
 
         Comunicator.printer("Using remote server '%s'" % Configuration.remote_server)
+
+        # Check hashcat workload
+        if type(Configuration.hashcat_workload) is not int:
+            Comunicator.fatal_regular_message("Key 'hashcat_workload' from configuration file '%s' has invalid type %s"
+                                              " instead of int" % (Configuration.config_file,
+                                                                   type(Configuration.hashcat_workload)))
+        if Configuration.hashcat_workload < 1 or Configuration.hashcat_workload > 4:
+            Comunicator.dual_printer(Comunicator.logger.warn, "Hashcat workload should be 1-4. Value found is %d."
+                                                              "Using default 4")
+            Configuration.hashcat_workload = 4
 
         # Check API key
         if Configuration.apikey is None or len(Configuration.apikey) < 10:

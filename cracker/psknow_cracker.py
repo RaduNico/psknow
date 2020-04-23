@@ -506,7 +506,7 @@ class Cracker:
         signal.signal(signal.SIGTERM, signal_handler)
 
         Configuration.initialize()
-        Cracker.crt_workload = 4  # TODO get value from parameters, adjust from keyboard
+        Cracker.crt_workload = Configuration.hashcat_workload  # TODO maybe adjust from keyboard
 
         Cracker.req = Requester(Configuration.apikey, Comunicator.error_logger)
 
