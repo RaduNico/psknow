@@ -181,7 +181,7 @@ class Configuration(object):
             Comunicator.fatal_regular_message(error_string)
 
         # Check remote server location
-        if Configuration.remote_server is None or Configuration.remote_server < 1:
+        if Configuration.remote_server is None or len(Configuration.remote_server) < 1:
             Comunicator.fatal_regular_message("Invalid or missing remote server location. Please write server location"
                                               "in configuration file Ex. '\"server_location\": \"http://127.0.0.1:9645/\"'")
         if not (Configuration.remote_server.startswith("https://") or Configuration.remote_server.startswith("http://")):
