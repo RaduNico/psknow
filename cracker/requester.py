@@ -6,6 +6,8 @@ from comunicator import Comunicator
 
 
 class Requester:
+    DownMessage = "Server is down. Check connection/config file. Retrying in 10 seconds.."
+
     class ServerDown(Exception):
         pass
 
@@ -45,6 +47,8 @@ class Requester:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
+        if response.status_code == 502:
+            raise Requester.ServerDown
 
         data, err = Requester._decode_json(response)
         if err != "":
@@ -77,6 +81,8 @@ class Requester:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
+        if response.status_code == 502:
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -102,6 +108,8 @@ class Requester:
         try:
             response = requests.post(url, data={"apikey": self.apikey})
         except requests.exceptions.ConnectionError:
+            raise Requester.ServerDown
+        if response.status_code == 502:
             raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
@@ -129,6 +137,8 @@ class Requester:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
+        if response.status_code == 502:
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -155,7 +165,8 @@ class Requester:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
-
+        if response.status_code == 502:
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":
@@ -210,6 +221,8 @@ class Requester:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
+        if response.status_code == 502:
+            raise Requester.ServerDown
 
         data, err = Requester._decode_json(response)
         if err != "":
@@ -238,7 +251,8 @@ class Requester:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
             Configuration.log_fatal("Backend is unresponsive")
-        
+        if response.status_code == 502:
+            raise Requester.ServerDown
 
         _, err = Requester._decode_json(response)
         if err != "":

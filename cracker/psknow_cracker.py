@@ -318,7 +318,7 @@ class Cracker:
             Cracker.crt_process = DoubleProcess(generator_command, Cracker.attack_command)
 
     @staticmethod
-    def crack_existing_handshakes():
+    def do_work():
         # Something just finished!
         if Cracker.crt_process is not None and Cracker.crt_process.isdead():
             Cracker.process_result()
@@ -339,10 +339,10 @@ class Cracker:
         try:
             work = Cracker.req.getwork()
         except Cracker.req.ServerDown:
-            # TODO print something maybe
+            Comunicator.printer(Comunicator.printer(Requester.DownMessage))
             return
 
-        die(work is True, "An error occured while getting work!")
+        die(work is True, "A server side error occured while getting work!")
 
         # No work to be done right now
         if work is None:
@@ -414,7 +414,8 @@ class Cracker:
                 Cracker.req.stopwork(suppress_stdout=True)
                 break
             except Cracker.req.ServerDown:
-                pass
+                Comunicator.printer(Requester.DownMessage)
+                sleep(10)
         return
 
     @staticmethod
@@ -522,7 +523,7 @@ class Cracker:
                 now_time = datetime.now()
                 if last_time is None or (now_time - last_time).total_seconds() > 10:
                     last_time = now_time
-                    Cracker.crack_existing_handshakes()
+                    Cracker.do_work()
 
                 cmd = Comunicator.get_command()
                 if cmd is not None:
