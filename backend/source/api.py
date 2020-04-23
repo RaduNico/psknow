@@ -328,8 +328,6 @@ def getmissing_v1(**_):
                     entry = {"type": Configuration.cap_dict[req]["type"],
                              "path": Configuration.cap_dict[req]["path"]}
                     response.append(entry)
-                    print("sha1 hash does not match for req '%s' client has '%s', we have '%s'" %
-                          (req, client_capabilities[req], Configuration.cap_dict[req]["sha1"]))
                     continue
 
             if req not in client_capabilities and req not in rule_reqs:

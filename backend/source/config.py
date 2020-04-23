@@ -310,7 +310,6 @@ class Configuration(object):
         if base_cap_dict["last_change"] is None or\
                 (base_cap_dict["last_change"] is not None and last_mod > base_cap_dict["last_change"]):
             new_cap_dict["last_change"] = last_mod
-            print("STARTING HASHING")
             new_cap_dict["sha1"] = Configuration.sha1file(path)
 
         if new_cap_dict["sha1"] == "":
