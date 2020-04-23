@@ -17,8 +17,8 @@ class Configuration(object):
 	    "apikey": "" }
 
     # Remote location info
-    # remote_server = "https://pandorak.go.ro/api/v1/"
-    remote_server = "http://127.0.0.1:9645/api/v1/"
+    remote_server = None
+
     capabilities = []
     capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
     programs = ["hashcat", "john"]
@@ -161,6 +161,8 @@ class Configuration(object):
                 error_string += err
                 Configuration.john_path, err = load_key("john_path")
                 error_string += err
+                Configuration.remote_server, err = load_key("server_location")
+                error_string += err
         except json.decoder.JSONDecodeError as e:
             Comunicator.fatal_regular_message("Configuration file '%s' is not a valid json with error '%s'. Fix"
                                       "file or completely remove to restore to default state." %
@@ -175,10 +177,25 @@ class Configuration(object):
                 error_string = error_string[:-1]
             Comunicator.fatal_regular_message(error_string)
 
+        # Check remote server location
+        if Configuration.remote_server is None or Configuration.remote_server < 1:
+            Comunicator.fatal_regular_message("Invalid or missing remote server location. Please write server location"
+                                              "in configuration file Ex. '\"server_location\": \"http://127.0.0.1:9645/\"'")
+        if not (Configuration.remote_server.startswith("https://") or Configuration.remote_server.startswith("http://")):
+            Comunicator.fatal_regular_message("Server location should start with either 'https://' or 'http://'")
+
+        if not Configuration.remote_server.endswith("/"):
+            Configuration.remote_server += "/"
+        Configuration.remote_server += "api/v1/"
+
+        Comunicator.printer("Using remote server '%s'" % Configuration.remote_server)
+
+        # Check API key
         if Configuration.apikey is None or len(Configuration.apikey) < 10:
             Comunicator.fatal_regular_message("Invalid or missing api key in config file '%s'. Please generate key "
                                       "and write it on the configuration file." % Configuration.config_file)
 
+        # Check john path
         if len(Configuration.john_path) == 0:
             Configuration.john_path = None
         elif not os.path.exists(Configuration.john_path):
