@@ -148,8 +148,10 @@ class NoProcess:
                     hashcat_progress["devices"][devnum] = speed
 
                 if not multiple_devices:
-                    hashcat_progress["devices"][0] = hashcat_progress["devices"][1]
-                hashcat_progress["speed"] = hashcat_progress["devices"][0]
+                    hashcat_progress["speed"] = hashcat_progress["devices"][0] = hashcat_progress["devices"][1]
+
+                if 0 in hashcat_progress["devices"]:
+                    hashcat_progress["speed"] = hashcat_progress["devices"][0]
         read_pipe.close()
 
     @staticmethod
