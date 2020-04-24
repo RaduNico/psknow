@@ -103,8 +103,8 @@ class Configuration(object):
             p.generate_output()
             retcode = p.poll()
             if 'No "TestRulePSKnow" mode rules found in' in p.stderr():
-                return "john-local.conf was not loaded by john. Check the configuration file '%s' and uncomment the" \
-                       " line `#.include './john-local.conf'`" % Configuration.john_path
+                return "john-local.conf was not loaded by john. Check the configuration file '%s.conf' and uncomment" \
+                       "the line `#.include './john-local.conf'`" % Configuration.john_path
 
             if retcode != 0:
                 return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" % \
