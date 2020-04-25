@@ -434,7 +434,8 @@ def upload_file():
         # Generate a unique filename to permanently save file
         file_path = get_unique_filename_path(file.filename)
 
-        new_entry["path"] = file_path
+        for wifi_entry in wifi_entries:
+            wifi_entry["path"] = file_path
 
         # Save received file
         try:
