@@ -416,17 +416,11 @@ def upload_file():
         _, tmp_path = tempfile.mkstemp()
         file.save(tmp_path)
 
-        # Generate a unique filename to permanently save file
-        file_path = get_unique_filename_path(file.filename)
-
         new_entry = deepcopy(Configuration.default_wifi)
-
-        new_entry["date_added"] = datetime.datetime.now()
 
         # new_entry["location"]["keyword"] = #TODO POST keyword
         # new_entry["location"]["coordinates"] = #TODO POST coordinates
-
-        new_entry["path"] = file_path
+        new_entry["date_added"] = datetime.datetime.now()
         new_entry["users"] = [current_user.get_id()]
         new_entry["priority"] = 0
 
@@ -434,7 +428,13 @@ def upload_file():
         valid_handshake, wifi_entries = check_handshake(tmp_path, file.filename, new_entry)
 
         if not valid_handshake:
+            os.remove(tmp_path)
             continue
+
+        # Generate a unique filename to permanently save file
+        file_path = get_unique_filename_path(file.filename)
+
+        new_entry["path"] = file_path
 
         # Save received file
         try:
