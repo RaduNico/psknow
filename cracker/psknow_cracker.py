@@ -188,7 +188,7 @@ class Cracker:
         if Cracker.crt_rule["type"] == "filemask_hashcat" or Cracker.crt_rule["wordsize"] <= 0:
             eta = "No ETA available"
         elif Cracker.eta_dict["progress"] == -1 and Cracker.eta_dict["eta"] == "":
-            eta = "Calculating ETA"
+            eta = "Cracking process starting"
         elif Cracker.eta_dict["eta"] != "" and Cracker.eta_dict["eta"] != "(0 secs)":
             eta = Cracker.eta_dict["eta"]
         elif Cracker.eta_dict["speed"] != -1 and Cracker.eta_dict["progress"] != -1:
@@ -361,6 +361,9 @@ class Cracker:
             Comunicator.warning_logger("Capabilities out of date!")
             return
 
+        # Make status seem a bit more responsive
+        Cracker.old_eta = "Cracking process starting"
+
         Cracker.start_cracking(work)
 
     @staticmethod
@@ -442,10 +445,8 @@ class Cracker:
 
         hashcat_status = Cracker.crt_process.get_dict()
         output = pad("Current rule") + "%s\n" % Cracker.crt_rule["name"]
-        eta = hashcat_status["eta"]
-        if hashcat_status["eta"] == "":
-            eta = "Calculating"
-        output += pad("Eta") + "%s\n" % eta
+
+        output += pad("Eta") + "%s\n" % Cracker.old_eta
 
         if hashcat_status["speed"] > 0:
             if len(hashcat_status["devices"]) > 2:
