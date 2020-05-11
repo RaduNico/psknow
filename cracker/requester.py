@@ -46,7 +46,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
+            Comunicator.fatal_regular_message("Backend is unresponsive")
         if response.status_code == 502:
             raise Requester.ServerDown
 
@@ -80,7 +80,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
+            Comunicator.fatal_regular_message("Backend is unresponsive")
         if response.status_code == 502:
             raise Requester.ServerDown
 
@@ -136,7 +136,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
+            Comunicator.fatal_regular_message("Backend is unresponsive")
         if response.status_code == 502:
             raise Requester.ServerDown
 
@@ -164,7 +164,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
+            Comunicator.fatal_regular_message("Backend is unresponsive")
         if response.status_code == 502:
             raise Requester.ServerDown
 
@@ -198,8 +198,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
-
+            Comunicator.fatal_regular_message("Backend is unresponsive")
 
         return None
 
@@ -220,7 +219,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
+            Comunicator.fatal_regular_message("Backend is unresponsive")
         if response.status_code == 502:
             raise Requester.ServerDown
 
@@ -250,7 +249,7 @@ class Requester:
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
-            Configuration.log_fatal("Backend is unresponsive")
+            Comunicator.fatal_regular_message("Backend is unresponsive")
         if response.status_code == 502:
             raise Requester.ServerDown
 
