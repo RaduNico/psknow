@@ -29,7 +29,6 @@ def get_cracked_tuple(document):
     result["date"] = handshake["date_cracked"].strftime('%H:%M - %d.%m.%Y')
     result["raw_date"] = handshake["date_cracked"]
 
-
     return result
 
 
@@ -155,9 +154,8 @@ def home():
 @blob_api.route('/delete_wifi/', methods=['POST'])
 @login_required
 def delete_wifi():
-
-    id = request.form.get("id")
-    document = lookup_by_id(id)
+    wifi_id = request.form.get("id")
+    document = lookup_by_id(wifi_id)
     if document is None:
         flash("Id does not exist!")
         return redirect(url_for("home"))
@@ -168,10 +166,10 @@ def delete_wifi():
 
     new_users = document["users"]
     new_users.remove(current_user.get_id())
-    if new_users == []:
-        retire_handshake(id, document)
+    if len(new_users) < 1:
+        retire_handshake(wifi_id, document)
     else:
-        update_hs_id(id, {"users" : new_users})
+        update_hs_id(wifi_id, {"users": new_users})
 
     return redirect(url_for("blob_api.home"))
 

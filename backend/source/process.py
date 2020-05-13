@@ -147,7 +147,7 @@ class Process:
 
         if self.critical and self.pid.poll() != 0:
             Configuration.logger.critical("Process %s exited with status %d.\nStderr: %s\nStdout: %s" %
-                                         (" ".join(self.command), self.poll(), self.err, self.out))
+                                          (" ".join(self.command), self.poll(), self.err, self.out))
             sys.exit(self.poll())
 
         return self.out, self.err

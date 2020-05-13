@@ -146,7 +146,8 @@ def jwt_encode(dic, api_key):
 @login_required
 @not_admin
 def main_api():
-    user_entry = Configuration.users.find_one({"username": current_user.get_id()})  # TODO make a try except. Check for none
+    # TODO make a try except. Check for none
+    user_entry = Configuration.users.find_one({"username": current_user.get_id()})
 
     api_keys = []
     try:

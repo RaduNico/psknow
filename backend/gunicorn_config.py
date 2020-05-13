@@ -1,11 +1,12 @@
 import sys
 
 try:
-	sys.path.index('.')
+    sys.path.index('.')
 except ValueError:
-	sys.path.append('.')
+    sys.path.append('.')
 
 from source.config import Configuration
+
 
 def on_starting(server):
     Configuration.preinitialize(server)

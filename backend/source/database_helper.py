@@ -50,6 +50,7 @@ def generic_find(col, query, api_query=False):
 
     return values, err
 
+
 def lookup_by_id(internal_id):
     try:
         document = Configuration.wifis.find_one({"id": internal_id})
