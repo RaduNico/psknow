@@ -293,6 +293,18 @@
 		"link": ""
 	},
 	{
+		"name": "RoPhone",
+		"type": "mask_hashcat",
+		"priority": 102,
+		"path": "",
+		"mask_hashcat": "07?d?d?d?d?d?d?d?d",
+		"wordsize": 100000000,
+		"desc": "All 10 digits phone numbers starting with '07'",
+		"examples": ["0745192433", "0723182955", "0744103020", "0712385977"],
+		"reqs": ["hashcat"],
+		"link": ""
+	},
+	{
 		"name": "ThreeYears",
 		"type": "filemask_hashcat",
 		"priority": 108,
