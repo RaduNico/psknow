@@ -21,9 +21,9 @@ from comunicator import Comunicator
 
 def die(condition, message):
     if condition:
-        msg = "File '%s', line %s, in %s: '%s'" % \
-                 (inspect.getmodule(inspect.stack()[1][0]).__file__, inspect.currentframe().f_back.f_lineno,
-                  inspect.stack()[1][3], message)
+        msg = "File '%s', line %s, in %s: '%s'" %\
+              (inspect.getmodule(inspect.stack()[1][0]).__file__, inspect.currentframe().f_back.f_lineno,
+               inspect.stack()[1][3], message)
         Comunicator.dual_printer(Comunicator.logger.critical, msg)
         sys.exit(-1)
 

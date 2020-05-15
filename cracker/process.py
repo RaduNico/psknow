@@ -20,6 +20,7 @@ hashcat_progress_re = re.compile("^Progress[.]{9}: ([0-9]+)")
 hashcat_eta_re = re.compile("^Time[.]Estimated[.]{3}: [A-Za-z0-9: ]* ([(].*[)])$")
 hashcat_speed_re = re.compile("^Speed(.*?):[ ]+([0-9]*\.[0-9]* .?H/s)")
 
+
 class NoProcess:
     @staticmethod
     def get_devnull_w():

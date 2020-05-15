@@ -25,6 +25,7 @@ def reader_thread():
         print("Unexpected exception in reader thread %s" % e)
         sys.exit(-1)
 
+
 class Comunicator:
     # Logging variables
     log_filename = 'logs/cracker.log'

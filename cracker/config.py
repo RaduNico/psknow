@@ -17,7 +17,7 @@ class Configuration(object):
     config_file = "cracker.conf"
     empty_config = {
         "john_path": "",
-	    "apikey": "" }
+        "apikey": ""}
 
     # Remote location info
     remote_server = None
@@ -94,7 +94,7 @@ class Configuration(object):
             p.generate_output()
             retcode = p.poll()
             if retcode != 0:
-                return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" %\
+                return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" % \
                        (test_john_runs, retcode, p.stdout(), p.stderr())
 
             test_john_runs = "%s --wordlist=%s --stdout --rules=TestRulePSKnow" % (Configuration.john_path, passwd_file)
@@ -136,7 +136,6 @@ class Configuration(object):
         #         del Configuration.capabilities["hashcat"]
         #         Comunicator.dual_printer(Comunicator.logger.warn, "Hashcat is not currently available: '%s'" % res)
 
-
     @staticmethod
     def gather_capabilities():
         """
@@ -174,7 +173,8 @@ class Configuration(object):
                 with open(Configuration.sha1s_filename, "w+") as fd:
                     json.dump(Configuration.old_sha1s, fd, indent=4)
             except Exception as e:
-                Comunicator.fatal_debug_printer("Error trying to dump data in %s: %s" % (Configuration.sha1s_filename, e))
+                Comunicator.fatal_debug_printer(
+                    "Error trying to dump data in %s: %s" % (Configuration.sha1s_filename, e))
 
         one_program = False
         for program in Configuration.programs:
@@ -188,8 +188,9 @@ class Configuration(object):
                     Configuration.capabilities[program] = True
                     one_program = True
                 else:
-                    Comunicator.printer("John the ripper not installed, some rules will not run until it is installed and "
-                                        "path supplied in config file '%s'" % Configuration.config_file)
+                    Comunicator.printer(
+                        "John the ripper not installed, some rules will not run until it is installed and "
+                        "path supplied in config file '%s'" % Configuration.config_file)
                 continue
 
             if which(program) is not None:
@@ -214,6 +215,7 @@ class Configuration(object):
         try:
             with open(Configuration.config_file) as file:
                 config = json.load(file)
+
                 def load_key(lkey):
                     try:
                         return config[lkey], ""
@@ -230,13 +232,14 @@ class Configuration(object):
                 error_string += err
         except json.decoder.JSONDecodeError as e:
             Comunicator.fatal_regular_message("Configuration file '%s' is not a valid json with error '%s'. Fix"
-                                      "file or completely remove to restore to default state." %
-                                      (Configuration.config_file, e))
+                                              "file or completely remove to restore to default state." %
+                                              (Configuration.config_file, e))
         except FileNotFoundError:
             with open(Configuration.config_file, "w") as fd:
                 json.dump(Configuration.empty_config, fd)
             Comunicator.fatal_regular_message("Configuration file '%s' did not exist. Empty file was generated, please"
-                                      "fill in data for the cracker to properly work." % Configuration.config_file)
+                                              "fill in data for the cracker to properly work." %
+                                              Configuration.config_file)
         if len(error_string) > 0:
             if error_string.endswith("\n"):
                 error_string = error_string[:-1]
@@ -245,8 +248,10 @@ class Configuration(object):
         # Check remote server location
         if Configuration.remote_server is None or len(Configuration.remote_server) < 1:
             Comunicator.fatal_regular_message("Invalid or missing remote server location. Please write server location"
-                                              "in configuration file Ex. '\"server_location\": \"http://127.0.0.1:9645/\"'")
-        if not (Configuration.remote_server.startswith("https://") or Configuration.remote_server.startswith("http://")):
+                                              "in configuration file Ex. "
+                                              "'\"server_location\": \"http://127.0.0.1:9645/\"'")
+        if not (Configuration.remote_server.startswith("https://") or Configuration.remote_server.startswith(
+                "http://")):
             Comunicator.fatal_regular_message("Server location should start with either 'https://' or 'http://'")
 
         if not Configuration.remote_server.endswith("/"):
@@ -268,13 +273,14 @@ class Configuration(object):
         # Check API key
         if Configuration.apikey is None or len(Configuration.apikey) < 10:
             Comunicator.fatal_regular_message("Invalid or missing api key in config file '%s'. Please generate key "
-                                      "and write it on the configuration file." % Configuration.config_file)
+                                              "and write it on the configuration file." % Configuration.config_file)
 
         # Check john path
         if len(Configuration.john_path) == 0:
             Configuration.john_path = None
         elif not os.path.exists(Configuration.john_path):
-            Comunicator.fatal_regular_message("Supplied path for john the ripper '%s' is not valid" % Configuration.john_path)
+            Comunicator.fatal_regular_message(
+                "Supplied path for john the ripper '%s' is not valid" % Configuration.john_path)
 
     @staticmethod
     def load_sha1s():

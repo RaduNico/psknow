@@ -42,7 +42,8 @@ class Requester:
 
         response = None
         try:
-            response = requests.post(url, json = {"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
+            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities},
+                                     timeout=10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
@@ -76,7 +77,7 @@ class Requester:
 
         response = None
         try:
-            response = requests.post(url, data={"apikey": self.apikey}, timeout = 10)
+            response = requests.post(url, data={"apikey": self.apikey}, timeout=10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
@@ -132,7 +133,7 @@ class Requester:
 
         response = None
         try:
-            response = requests.post(url, data={"apikey": self.apikey, "eta": eta}, timeout = 10)
+            response = requests.post(url, data={"apikey": self.apikey, "eta": eta}, timeout=10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
@@ -160,7 +161,7 @@ class Requester:
 
         response = None
         try:
-            response = requests.post(url, data={"apikey": self.apikey, "file": filename}, timeout = 10)
+            response = requests.post(url, data={"apikey": self.apikey, "file": filename}, timeout=10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
@@ -189,7 +190,7 @@ class Requester:
         Comunicator.info_logger("Getting file '%s' from '%s'" % (filename, url))
 
         try:
-            with requests.post(url, data={"apikey": self.apikey, "file": filename}, stream=True, timeout = 10) as req:
+            with requests.post(url, data={"apikey": self.apikey, "file": filename}, stream=True, timeout=10) as req:
                 req.raise_for_status()
                 with open(path, "wb+") as fd:
                     for chunk in req.iter_content(chunk_size=8192):
@@ -215,7 +216,8 @@ class Requester:
 
         response = None
         try:
-            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities}, timeout = 10)
+            response = requests.post(url, json={"apikey": self.apikey, "capabilities": Configuration.capabilities},
+                                     timeout=10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
@@ -245,7 +247,7 @@ class Requester:
 
         response = None
         try:
-            response = requests.post(url, data={"apikey": self.apikey, "password": password}, timeout = 10)
+            response = requests.post(url, data={"apikey": self.apikey, "password": password}, timeout=10)
         except requests.exceptions.ConnectionError:
             raise Requester.ServerDown
         except requests.exceptions.Timeout:
