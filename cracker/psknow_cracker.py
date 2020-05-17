@@ -261,10 +261,10 @@ class Cracker:
                 die(cracked_obj is None, "REGEX error! could not match the --show line:%s" % show_stdout)
                 password = cracked_obj.group(1)
 
-        msg = "[FAIL] Password for '%s' is not contained in rule '%s'" %\
+        msg = "[FAIL] Password for '%s' is not contained in rule '%s'\n" %\
               (Cracker.mac_ssid_job, Cracker.crt_rule["name"])
         if len(password) > 7:
-            msg = "[SUCCESS] The password for '%s' is '%s'" % (Cracker.mac_ssid_job, password)
+            msg = "[SUCCESS] The password for '%s' is '%s'\n" % (Cracker.mac_ssid_job, password)
 
         Comunicator.printer(msg)
         Cracker.safe_send_result(password)
