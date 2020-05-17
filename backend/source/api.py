@@ -17,6 +17,7 @@ from copy import deepcopy
 from flask import render_template, request, redirect, flash, url_for, Blueprint, send_from_directory, jsonify
 from functools import wraps
 from flask_login import login_required, current_user
+from base64 import b64decode
 
 key_template = {
     "user": "",
@@ -414,13 +415,14 @@ def sendeta_v1(**kwargs):
 
 
 def is_password(password, db_entry):
-    _, temp_filename = tempfile.mkstemp(prefix="psknow_backend")
+    _, password_temp_file = tempfile.mkstemp(prefix="psknow_backend")
+    _, hcx_temp_file = tempfile.mkstemp(prefix="psknow_backend")
 
-    with open(temp_filename, "w") as fd:
+    with open(password_temp_file, "w") as fd:
         fd.write(password)
 
     try:
-        wifi_hash = db_entry["path"]
+        Configuration.logger.info("%s" % db_entry)
         if db_entry["file_type"] == "16800":
             pmkid = ""
 
@@ -436,8 +438,13 @@ def is_password(password, db_entry):
                 return False, "Failed to retrieve PMKID from file for password check."
 
             wifi_hash = "-I %s" % pmkid
+        else:
+            hcxdata = Scheduler.get_hccapx_data(db_entry)
+            with open(hcx_temp_file, "wb") as fd:
+                fd.write(hcxdata)
+            wifi_hash = hcx_temp_file
 
-        command = 'aircrack-ng %s -w %s --bssid %s' % (wifi_hash, temp_filename, db_entry["handshake"]["MAC"])
+        command = 'aircrack-ng %s -w %s --bssid %s' % (wifi_hash, password_temp_file, db_entry["handshake"]["MAC"])
 
         process = Process(command)
         output = process.stdout()
@@ -456,7 +463,8 @@ def is_password(password, db_entry):
         Configuration.logger.error("Exception raised while checking password: '%s'" % e)
         return False, "Unexpected exception in password checking."
     finally:
-        os.remove(temp_filename)
+        os.remove(password_temp_file)
+        os.remove(hcx_temp_file)
 
 
 # Decorator that checks the validity of a API key sent
