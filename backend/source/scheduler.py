@@ -7,7 +7,7 @@ from .config import Configuration
 
 from bson.code import Code
 from tempfile import mkstemp
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from copy import deepcopy
 
 
@@ -133,6 +133,12 @@ class Scheduler:
 
     @staticmethod
     def _get_hccapx_data(crt_capture):
+        '''
+            This function should never be called from outside of this file because
+            the parameter it takes does not coincide with the database format.
+            :param crt_capture: Capture information as formatted by the mapreduce 'Scheduler.mapper_template'
+            :return: base64 encoded hccapx file for provided parameter
+        '''
         if not os.path.isfile(crt_capture["path"]):
             Configuration.logger.error("File '%s' from id '%s' does not exist." %
                                        (crt_capture['path'], crt_capture["id"]))
@@ -166,6 +172,33 @@ class Scheduler:
 
         with open(temp_filename, "rb") as fd:
             return b64encode(fd.read()).decode("utf8")
+
+    @staticmethod
+    def get_hccapx_data(crt_capture):
+        '''
+            This is a temporary fix needed until a better result checking
+            method is implemented. This should be removed as soon as possible.
+            Do not use this method.
+        :param crt_capture:
+        :return:
+        '''
+        intermediary = dict()
+        intermediary['date_added'] = crt_capture['date_added']
+        intermediary['priority'] = crt_capture['priority']
+        intermediary['id'] = crt_capture['id']
+        intermediary['path'] = crt_capture['path']
+        intermediary['file_type'] = crt_capture['file_type']
+        intermediary['id'] = crt_capture['id']
+        intermediary["mac"] = crt_capture["handshake"]["MAC"]
+        intermediary['ssid'] = crt_capture['handshake']['SSID']
+        intermediary['next_rule'] = ""
+        intermediary['rule_prio'] = -1
+        intermediary["handshake_type"] = crt_capture["handshake"]["handshake_type"]
+
+        if intermediary["file_type"] == "16800":
+            raise ValueError("Operation not supported for 16800 files!")
+
+        return b64decode(Scheduler._get_hccapx_data(intermediary).encode("utf8"))
 
     @staticmethod
     def get_all_possible_rules(client_capabilities):
