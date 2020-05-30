@@ -96,7 +96,7 @@ External dependencies which can be installed with apt are:
  * [gunicorn3](https://gunicorn.org/): The wsgi server
 To install those dependencies use:
 ```bash
-sudo apt-get install gunicorn3 mongo
+sudo apt-get install gunicorn3 mongodb
 
 ```
 
