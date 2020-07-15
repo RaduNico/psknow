@@ -17,7 +17,6 @@ from copy import deepcopy
 from flask import render_template, request, redirect, flash, url_for, Blueprint, send_from_directory, jsonify
 from functools import wraps
 from flask_login import login_required, current_user
-from base64 import b64decode
 
 key_template = {
     "user": "",
@@ -150,6 +149,10 @@ def main_api():
     # TODO make a try except. Check for none
     user_entry = Configuration.users.find_one({"username": current_user.get_id()})
 
+    if not user_entry["allow_api"]:
+        flash("Access denied. API access has to be requested from the administrator.")
+        return redirect(url_for("blob_api.home"))
+
     api_keys = []
     try:
         for key in user_entry["api_keys"]:
@@ -160,7 +163,7 @@ def main_api():
             # The jwt comes from the database, no need to check for validity
             values = jwt_decode(entry["key"], Configuration.api_secret_key)
             entry["name"] = values["name"]
-            entry["date_generated"] = datetime.datetime.strptime(values["date_generated"], '%Y-%m-%dT%H:%M:%S.%f')\
+            entry["date_generated"] = datetime.datetime.strptime(values["date_generated"], '%Y-%m-%dT%H:%M:%S.%f') \
                 .strftime('%H:%M - %d.%m.%Y')
 
             api_keys.append(entry)
