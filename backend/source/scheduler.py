@@ -147,8 +147,6 @@ class Scheduler:
         if crt_capture["file_type"] == "16800":
             return Scheduler._get_pmkid_mac(crt_capture["path"], crt_capture["mac"])
 
-        _, temp_filename = mkstemp(prefix="psknow_backend")
-
         if crt_capture["handshake_type"] == "PMKID":
             flag = "-z"
         elif crt_capture["handshake_type"] == "WPA":
@@ -160,6 +158,8 @@ class Scheduler:
 
         mac_addr = crt_capture["mac"].replace(":", "")
 
+        f, temp_filename = mkstemp(prefix="psknow_backend")
+
         # Filter packets based on bssid so we attack only one wifi in a file with multiple captures
         hcx_cmd = "hcxpcaptool %s %s %s --filtermac=%s" %\
                   (flag, temp_filename, crt_capture["path"], mac_addr)
@@ -170,8 +170,11 @@ class Scheduler:
             os.remove(temp_filename)
             return None
 
-        with open(temp_filename, "rb") as fd:
-            return b64encode(fd.read()).decode("utf8")
+        with open(f, "rb") as fd:
+            enc = b64encode(fd.read()).decode("utf8")
+            os.unlink(temp_filename)
+            return enc
+
 
     @staticmethod
     def get_hccapx_data(crt_capture):
