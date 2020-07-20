@@ -5,7 +5,7 @@ from .config import Configuration
 
 from functools import wraps
 from flask_login import current_user
-from flask import flash, redirect
+from flask import flash, redirect, request
 
 
 def check_db_conn():
@@ -34,6 +34,18 @@ def requires_admin(f):
         if is_admin(current_user):
             return f(*args, **kwargs)
 
+        flash("Not permitted!")
+        return redirect("/")
+
+    return decorated_function
+
+
+def ajax_requires_admin(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        request_xhr_key = request.headers.get('X-Requested-With')
+        if is_admin(current_user) and request_xhr_key and request_xhr_key == 'XMLHttpRequest':
+            return f(*args, **kwargs)
         flash("Not permitted!")
         return redirect("/")
 

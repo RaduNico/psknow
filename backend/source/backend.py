@@ -1,10 +1,9 @@
 from werkzeug.exceptions import abort
-
 from .config import Configuration
 from .user import User
-from .wrappers import is_admin, requires_admin, check_db_conn
+from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
 
-from flask import render_template, request, redirect, flash, url_for, Blueprint
+from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
 from .database_helper import update_hs_id, lookup_by_id
@@ -119,6 +118,13 @@ def home():
             else:
                 user_handshakes[crt_user]["cracked"].append(get_cracked_tuple(file_structure))
 
+        users_list = list(Configuration.users.find())
+        no_users = len(users_list)
+        for i in range(no_users):
+            crt_user = users_list[i]["username"]
+            if crt_user not in user_handshakes and crt_user != Configuration.admin_account:
+                user_handshakes[crt_user] = {"cracked": [], "uncracked": []}
+
         # Sort based on crack date using raw date field
         for entry in user_handshakes.values():
             entry["cracked"] = sorted(entry["cracked"], key=lambda k: k["raw_date"])
@@ -126,7 +132,13 @@ def home():
         # Transform dict to list and sort by username
         user_handshakes = sorted(user_handshakes.items(), key=lambda k: k[0])
 
-        return render_template('admin_home.html', user_handshakes=user_handshakes)
+        #  Dictionary with key=<user>, value=[<allow_api_value>]
+        entries = Configuration.users.find({})
+        allow_api_dict = {}
+        for entry in entries:
+            allow_api_dict[entry['username']] = entry['allow_api']
+
+        return render_template('admin_home.html', user_handshakes=user_handshakes, permissions=allow_api_dict)
 
     logged_in = current_user.is_authenticated
     if logged_in and check_db_conn() is None:
@@ -145,10 +157,23 @@ def home():
             else:
                 cracked.append(get_cracked_tuple(file_structure))
 
-        # Sort based on crack date using raw date field
+    # Sort based on crack date using raw date field
     cracked = sorted(cracked, key=lambda k: k["raw_date"])
 
     return render_template('home.html', uncracked=uncracked, cracked=cracked, logged_in=logged_in)
+
+
+@blob_api.route('/change_permissions/<name>')
+@ajax_requires_admin
+def change_permissions(name):
+    change = False
+    if Configuration.users.find_one({'username': name})['allow_api']:
+        Configuration.users.update_one({'username': name}, {"$set": {'allow_api': False}})
+    else:
+        Configuration.users.update_one({'username': name}, {"$set": {'allow_api': True}})
+        change = True
+    # return jsonify({"success": False, "reason": "Failed to connect to database"})
+    return jsonify({"success": True, "data": change})
 
 
 @blob_api.route('/delete_wifi/', methods=['POST'])
