@@ -271,7 +271,7 @@ def login():
 def register():
     if request.method == 'GET':
         if current_user.is_authenticated:
-            flash("You are already have an account")
+            flash("You already have an account")
             return redirect(url_for("blob_api.home"))
         return render_template('register.html')
 
@@ -313,3 +313,58 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for("blob_api.home"))
+
+
+@blob_api.route('/profile/', methods=['GET', 'POST'])
+@login_required
+def profile():
+    # TODO make a try except. Check for none
+    user_entry = Configuration.users.find_one({"username": current_user.get_id()})
+
+    fst_name = "Enter first name"
+    last_name = "Enter last name"
+    email = "Enter email"
+
+    try:
+        fst_name = Configuration.users.find_one({'username': current_user.get_id()})['first_name']
+    except KeyError:
+        pass
+
+    try:
+        last_name = Configuration.users.find_one({'username': current_user.get_id()})['last_name']
+    except KeyError:
+        pass
+
+    try:
+        email = Configuration.users.find_one({'username': current_user.get_id()})['email']
+    except KeyError:
+        pass
+
+    if request.method == "POST":
+        fst_name = request.form.get("first_name", None)
+        last_name = request.form.get("last_name", None)
+        email = request.form.get("email", None)
+
+        if fst_name is not None and len(fst_name) > 0:
+            try:
+                if user_entry["first_name"] != fst_name:
+                    Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
+            except KeyError:
+                Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
+
+        if last_name is not None and len(last_name) > 0:
+            try:
+                if user_entry["last_name"] != last_name:
+                    Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
+            except KeyError:
+                Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
+
+        if email is not None and len(email) > 0:
+            try:
+                if user_entry["email"] != email:
+                    Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
+            except KeyError:
+                Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
+
+    return render_template('profile.html', username=current_user.get_id(), first_name=fst_name,
+                           last_name=last_name, email=email)

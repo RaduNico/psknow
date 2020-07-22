@@ -39,6 +39,7 @@
   {% if logged_in %}
   <li><a href='/statuses/'>Statuses</a></li>
   <li><a class="active" href='/api/'>API</a></li>
+  <li><a href='/profile/'>Profile</a></li>
   <li style="float:right"><a href='/logout/'>Logout</a></li>
   {% else %}
   <li style="float:right"><a href='/register/'>Register</a></li>
@@ -82,7 +83,7 @@
   <br>
   <h2> Generate a new API key: </h2>
   <label for="Keyname"><b>Keyname</b></label>
-  <input type="text" placeholder="Enter API key name" name="keyname" required="">
+  <input type="text" placeholder="Enter API key name" id="keyname" name="keyname" required="">
   <button type="submit">Generate API key</button>
 </div>
 </form>

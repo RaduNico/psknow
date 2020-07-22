@@ -12,7 +12,10 @@ user_template = {
     "username": "",
     "password": "",
     "allow_api": False,
-    "api_keys": []
+    "api_keys": [],
+    "first_name": "",
+    "last_name": "",
+    "email": "",
 }
 
 
