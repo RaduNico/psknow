@@ -368,3 +368,19 @@ def profile():
 
     return render_template('profile.html', username=current_user.get_id(), first_name=fst_name,
                            last_name=last_name, email=email)
+
+
+@blob_api.route('/reset_password/', methods=['GET', 'POST'])
+def reset_password():
+    if request.method == 'POST':
+        # send email when the form is submitted
+        email = request.form.get("email", None)
+        if Configuration.users.find_one({"email": email}) is None:
+            flash("Incorrect email")
+            return redirect(request.url)
+        flash("Successfully sent! Please check your email account for a message with a confirmation code you can use "
+              "to reset your password.", 'success')
+        return redirect(url_for("blob_api.login"))
+
+    # show the form, it wasn't submitted
+    return render_template('reset_password.html')
