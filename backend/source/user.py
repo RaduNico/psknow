@@ -13,9 +13,9 @@ user_template = {
     "password": "",
     "allow_api": False,
     "api_keys": [],
-    "first_name": "",
-    "last_name": "",
-    "email": "",
+    "first_name": "Enter first name",
+    "last_name": "Enter last name",
+    "email": "Enter email"
 }
 
 
@@ -46,6 +46,20 @@ class User(UserMixin):
             Configuration.logger.crititcal("Database integrity error. Multiple users '%s' exist!" % username)
 
         return len(document) != 0 and check_bcrypt(document[0]["password"], password)
+
+    @staticmethod
+    def check_recovery_credentials(username, password):
+        document = list(Configuration.users.find({"username": username}, {"recovery_password": 1, "_id": 0}))
+
+        if len(document) > 1:
+            Configuration.logger.crititcal("Database integrity error. Multiple users '%s' exist!" % username)
+
+        try:
+            return len(document) != 0 and check_bcrypt(document[0]["recovery_password"], password)
+        except KeyError:
+            return False
+        except ValueError:
+            return False
 
     @staticmethod
     def create_user(username, password):

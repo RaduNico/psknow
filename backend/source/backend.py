@@ -1,14 +1,19 @@
+import random
+import string
+
 from werkzeug.exceptions import abort
 from .config import Configuration
-from .user import User
+from .user import User, enc_bcrypt
 from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
 
-from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify
+from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 
 from .database_helper import update_hs_id, lookup_by_id
 
 from .upload import retire_handshake
+
+from flask_mail import Mail, Message
 
 blob_api = Blueprint('blob_api', __name__)
 
@@ -172,7 +177,7 @@ def change_permissions(name):
     else:
         Configuration.users.update_one({'username': name}, {"$set": {'allow_api': True}})
         change = True
-    # return jsonify({"success": False, "reason": "Failed to connect to database"})
+
     return jsonify({"success": True, "data": change})
 
 
@@ -257,10 +262,11 @@ def login():
             return redirect(request.url)
 
         if not User.check_credentials(username, password):
-            Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
-                                         (username, password))
-            flash("Incorrect username/password!")
-            return redirect(request.url)
+            if not User.check_recovery_credentials(username, password):
+                Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
+                                             (username, password))
+                flash("Incorrect username/password!")
+                return redirect(request.url)
 
         login_user(User(username))
 
@@ -318,53 +324,77 @@ def logout():
 @blob_api.route('/profile/', methods=['GET', 'POST'])
 @login_required
 def profile():
-    # TODO make a try except. Check for none
     user_entry = Configuration.users.find_one({"username": current_user.get_id()})
 
-    fst_name = "Enter first name"
-    last_name = "Enter last name"
-    email = "Enter email"
-
-    try:
-        fst_name = Configuration.users.find_one({'username': current_user.get_id()})['first_name']
-    except KeyError:
-        pass
-
-    try:
-        last_name = Configuration.users.find_one({'username': current_user.get_id()})['last_name']
-    except KeyError:
-        pass
-
-    try:
-        email = Configuration.users.find_one({'username': current_user.get_id()})['email']
-    except KeyError:
-        pass
+    fst_name = ""
+    last_name = ""
+    email = ""
+    password = ""
+    confirm = ""
 
     if request.method == "POST":
         fst_name = request.form.get("first_name", None)
         last_name = request.form.get("last_name", None)
         email = request.form.get("email", None)
+        password = request.form.get("password", None)
+        confirm = request.form.get("confirm", None)
 
-        if fst_name is not None and len(fst_name) > 0:
-            try:
-                if user_entry["first_name"] != fst_name:
-                    Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
-            except KeyError:
+    if len(fst_name) > 0:
+        try:
+            if user_entry["first_name"] != fst_name:
                 Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
+        except KeyError:
+            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
+    else:
+        try:
+            fst_name = user_entry["first_name"]
+        except KeyError:
+            fst_name = "Enter first name"
 
-        if last_name is not None and len(last_name) > 0:
-            try:
-                if user_entry["last_name"] != last_name:
-                    Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
-            except KeyError:
+    if len(last_name) > 0:
+        try:
+            if user_entry["last_name"] != last_name:
                 Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
+        except KeyError:
+            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
+    else:
+        try:
+            last_name = user_entry["last_name"]
+        except KeyError:
+            last_name = "Enter last name"
 
-        if email is not None and len(email) > 0:
-            try:
-                if user_entry["email"] != email:
-                    Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
-            except KeyError:
+    if len(email) > 0:
+        try:
+            if user_entry["email"] != email:
                 Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
+        except KeyError:
+            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
+    else:
+        try:
+            email = user_entry["email"]
+        except KeyError:
+            email = "Enter email"
+
+    # password resetting
+    if len(password) == 0 and len(confirm) > 0:
+        flash("Invalid password!")
+
+    if len(password) > 0:
+        if len(password) < 6:
+            flash("C'mon... use at least 6 characters... pretty please?")
+            return redirect(request.url)
+
+        if len(password) > 150:
+            flash("The password is waaaaay too long. Please don't.")
+            return redirect(request.url)
+
+        if password != confirm:
+            flash("The password confirmation does not match.")
+            return redirect(request.url)
+
+        if enc_bcrypt(password) != user_entry["password"]:
+            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"password": enc_bcrypt(password)}})
+            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"recovery_password": ""}})
 
     return render_template('profile.html', username=current_user.get_id(), first_name=fst_name,
                            last_name=last_name, email=email)
@@ -378,8 +408,28 @@ def reset_password():
         if Configuration.users.find_one({"email": email}) is None:
             flash("Incorrect email")
             return redirect(request.url)
-        flash("Successfully sent! Please check your email account for a message with a confirmation code you can use "
-              "to reset your password.", 'success')
+
+        current_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+        current_app.config['MAIL_PORT'] = 465
+        current_app.config['MAIL_USERNAME'] = 'psknow.pandora@gmail.com'
+        current_app.config['MAIL_PASSWORD'] = 'Pandora1!'
+        current_app.config['MAIL_USE_TLS'] = False
+        current_app.config['MAIL_USE_SSL'] = True
+        mail = Mail(current_app)
+        msg = Message(
+            "Password reset",
+            sender=("PSKnow", "psknow.pandora@gmail.com"),
+            recipients=[email]
+        )
+
+        random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase +
+                                                             string.digits) for _ in range(10))
+        msg.body = "Please use the code " + random_string + " to reset your password. "
+        msg.body = msg.body + "If you did not request your password to be reset, ignore this message."
+        mail.send(msg)
+        Configuration.users.update({"email": email}, {"$set": {"recovery_password": enc_bcrypt(random_string)}})
+        flash("Successfully sent! Please check your email account for a message with a confirmation code "
+              "you can use to reset your password.", 'success')
         return redirect(url_for("blob_api.login"))
 
     # show the form, it wasn't submitted

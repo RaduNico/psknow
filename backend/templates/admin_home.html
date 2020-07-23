@@ -3,32 +3,32 @@
 <head>
     <title>PSKnow</title>
     <style>
-        div.userbox {
-            border: 2px solid green;
-            margin: 5px;
-            padding: 5px;
-        }
 
-        .greenbtn {
-          width: 50px;
-          height: 35px;
-          background-color: green;
-          color: white;
-          text-align:center;
-          line-height:50px;
-          border-radius: 30px;
-        }
+    div.userbox {
+        border: 2px solid green;
+        margin: 5px;
+        padding: 5px;
+    }
 
-        .redbtn {
-          width: 50px;
-          height: 35px;
-          background-color: red;
-          color: white;
-          text-align:center;
-          line-height:50px;
-          border-radius: 30px;
-        }
+    .greenbtn {
+      width: 50px;
+      height: 35px;
+      background-color: green;
+      color: white;
+      text-align:center;
+      line-height:50px;
+      border-radius: 30px;
+    }
 
+    .redbtn {
+      width: 50px;
+      height: 35px;
+      background-color: red;
+      color: white;
+      text-align:center;
+      line-height:50px;
+      border-radius: 30px;
+    }
     </style>
 
     <link rel="stylesheet" type="text/css" href="/css/table.css">
@@ -95,9 +95,9 @@
                     </script>
                 </h4>
             </form>
-
         </div>
-        {% if user_hs_pair[1]["uncracked"]| s
+
+        {% if user_hs_pair[1]["uncracked"]|length > 0 %}
             <table>
                 <tr>
                     <th>Wifi Name</th>
