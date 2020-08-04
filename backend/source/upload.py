@@ -56,21 +56,17 @@ def get_unique_id():
     return unique_id
 
 
-def get_hccapx_file(attack_type, filepath):
+def get_22000_file(attack_type, filepath):
     _, temp_filename = tempfile.mkstemp(prefix="psknow_backend")
 
     # Memorize name so we can later delete it
-    flag = ""
-    if attack_type == "PMKID":
-        flag = "-z"
-    elif attack_type == "WPA":
-        flag = "-o"
-    else:
+    flag = "-o"
+    if not(attack_type == "PMKID" or attack_type == "WPA"):
         die(True, "Unsupported attack type %s" % attack_type)
 
-    # Conversion to hccapx
+    # Conversion to .22000
     die(not os.path.isfile(filepath), "File %s does not exist!" % filepath)
-    command = ["hcxpcaptool", flag, temp_filename, filepath]
+    command = ["hcxpcapngtool", flag, temp_filename, filepath]
 
     stdout = Process(command, crit=True).stdout()
 
@@ -206,30 +202,6 @@ def treat_duplicate(wifi_entry):
     return duplicate_flag, False
 
 
-# See for reference https://hashcat.net/wiki/doku.php?id=hccapx
-def parse_hccapx(data):
-    hccapx_len = 0x189
-    result = []
-
-    while True:
-        idx = data.find(b'HCPX')
-        if idx == -1:
-            break
-
-        hccapx = data[idx: idx + hccapx_len + 1]
-
-        if len(hccapx) < hccapx_len:
-            break
-
-        data = data[idx + hccapx_len + 1:]
-        essid = hccapx[0xa:0x2a].decode('utf8').rstrip('\x00')
-        mac_hex = hccapx[0x3b:0x41].hex()
-        mac = ":".join(a + b for a, b in zip(mac_hex[::2], mac_hex[1::2]))
-        result.append((mac, essid))
-
-    return result
-
-
 # TODO change this to proper file type check - use file or directly detect magic numbers
 def check_handshake(file_path, filename, wifi_entry):
     entries = []
@@ -239,92 +211,47 @@ def check_handshake(file_path, filename, wifi_entry):
 
     # We add: file_type, handshake[SSID, MAC, open, handshake_type]
     # We will add later: handshake[tried_dicts, password, date_cracked]
-    if filename.endswith(".16800"):
-        wifi_entry["file_type"] = "16800"
-
-        with open(file_path, "r") as file_handler:
-            lines = file_handler.readlines()
-
-        if len(lines) < 0:
-            flash("Error! File '%s' is empty!" % filename)
-            return False, None
-
-        # Rewrite file to delete any malformed lines
-        with open(file_path, "w") as file_handler:
-            for line in lines:
-                matchobj = Configuration.pmkid_regex.match(line)
-                if matchobj is None:
-                    continue
-
-                file_handler.write(line)
-                handshake = deepcopy(Configuration.default_handshake)
-                handshake["MAC"] = ":".join(a + b for a, b in zip(matchobj.group(1)[::2], matchobj.group(1)[1::2]))
-                handshake["SSID"] = bytearray.fromhex(matchobj.group(2)).decode()
-                handshake["handshake_type"] = "PMKID"
-
-                # Check for duplications inside the same file and silently drop them
-                if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
-                    continue
-
-                tmp_wifi = deepcopy(wifi_entry)
-
-                # Generate unique ID for our document
-                tmp_wifi["id"] = get_unique_id()
-
-                tmp_wifi["handshake"] = handshake
-
-                is_duplicate, error = treat_duplicate(tmp_wifi)
-                if error:
-                    return False, None
-
-                if is_duplicate:
-                    duplicate_flag = True
-                    continue
-
-                # Check next PMKIDs in this file against this list of pairs to avoid duplicates in the same file
-                duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
-
-                entries.append(tmp_wifi)
-
-    if filename.endswith((".cap", ".pcap", ".pcapng")):
+    if filename.endswith((".cap", ".pcap", ".pcapng", ".16800", ".22000")):
         # We count how many already cracked files we got
         wifi_entry["file_type"] = filename[filename.rfind('.') + 1:]
         hs_types = ["PMKID", "WPA"]
 
         # Try for both PMKID and WPA
         for hs_type in hs_types:
-            temp_filename = get_hccapx_file(hs_type, file_path)
+            if filename.endswith(".16800") or filename.endswith(".22000"):
+                die(not os.path.isfile(file_path), "File %s does not exist!" % file_path)
+                temp_filename = file_path
+            else:
+                temp_filename = get_22000_file(hs_type, file_path)
 
             if temp_filename is None:
                 continue
 
-            crack_type = "-m 16800" if hs_type == "PMKID" else "-m 2500"
+            crack_type = "-m 22000"
             show_command = "hashcat --potfile-path=%s --left %s %s" % \
                            (Configuration.empty_pot_path, crack_type, temp_filename)
 
             # Test with hashcat if files contain valid data
             mac_ssid_list = []
-            if hs_type == "PMKID":
-                output = Process(show_command, crit=True).stdout()
 
-                if output is None or len(output) <= 0:
+            output = Process(show_command, crit=True).stdout()
+            if output is None or len(output) <= 0:
+                continue
+
+            for cracked_target in output.split():
+                if hs_type == "PMKID":
+                    cracker_obj = Configuration.regex_pmkid.match(cracked_target)
+                else:
+                    cracker_obj = Configuration.regex_handshake.match(cracked_target)
+
+                if cracker_obj is None:
+                    Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
                     continue
 
-                for cracked_target in output.split():
-                    cracker_obj = Configuration.hashcat_left_regex.match(cracked_target)
+                mac = ":".join(a + b for a, b in zip(cracker_obj.group(1)[::2], cracker_obj.group(1)[1::2]))
+                ssid = bytearray.fromhex(cracker_obj.group(2)).decode()
 
-                    if cracker_obj is None:
-                        Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
-                        continue
-
-                    mac = ":".join(a + b for a, b in zip(cracker_obj.group(1)[::2], cracker_obj.group(1)[1::2]))
-                    ssid = bytearray.fromhex(cracker_obj.group(2)).decode()
-
-                    mac_ssid_list.append((mac, ssid))
-            else:
-                raw_output = Process(show_command, crit=True).raw_stdout()
-
-                mac_ssid_list = parse_hccapx(raw_output)
+                mac_ssid_list.append((mac, ssid))
 
             for mac, ssid in mac_ssid_list:
                 # Remove duplicate entries in the same file - filter by MAC
@@ -367,7 +294,8 @@ def check_handshake(file_path, filename, wifi_entry):
 
                 entries.append(tmp_wifi)
 
-            os.remove(temp_filename)
+            if not filename.endswith(".16800") and not filename.endswith(".22000"):
+                os.remove(temp_filename)
 
     if len(entries) == 0:
         if not duplicate_flag:

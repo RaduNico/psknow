@@ -18,7 +18,7 @@
 
 		<h2>Upload capture file(s)</h2>
 		<form action = "/upload/" method = "POST" enctype = "multipart/form-data">
-			<input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng" multiple>
+			<input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng,.22000" multiple>
 			<input type = "submit">
 			<br>
 			{% with messages = get_flashed_messages(with_categories=true) %}

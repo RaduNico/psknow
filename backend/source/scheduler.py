@@ -7,7 +7,6 @@ from .config import Configuration
 
 from bson.code import Code
 from tempfile import mkstemp
-from base64 import b64encode, b64decode
 from copy import deepcopy
 
 
@@ -119,11 +118,12 @@ class Scheduler:
 
     @staticmethod
     def _get_pmkid_mac(file, mac_addr):
+        """ return PMKID from a .16800 file that matches the given MAC """
         with open(file) as fd:
             for line in fd:
                 if line.endswith("\n"):
                     line = line[:-1]
-                matchobj = Configuration.pmkid_regex.match(line)
+                matchobj = Configuration.pmkid_16800_regex.match(line)
                 if matchobj is None:
                     continue
                 match_mac = ":".join(a + b for a, b in zip(matchobj.group(1)[::2], matchobj.group(1)[1::2]))
@@ -132,13 +132,30 @@ class Scheduler:
             return None
 
     @staticmethod
-    def _get_hccapx_data(crt_capture):
-        '''
+    def _get_capture_mac(file, mac_addr):
+        """ return PMKID/handshake from a .22000 file that matches the given MAC """
+        with open(file) as fd:
+            for line in fd:
+                if line.endswith("\n"):
+                    line = line[:-1]
+                matchobj = Configuration.regex_pmkid.match(line)
+                if matchobj is None:
+                    matchobj = Configuration.regex_handshake.match(line)
+                    if matchobj is None:
+                        continue
+                match_mac = ":".join(a + b for a, b in zip(matchobj.group(1)[::2], matchobj.group(1)[1::2]))
+                if mac_addr == match_mac:
+                    return line
+            return None
+
+    @staticmethod
+    def _get_22000_data(crt_capture):
+        """
             This function should never be called from outside of this file because
             the parameter it takes does not coincide with the database format.
             :param crt_capture: Capture information as formatted by the mapreduce 'Scheduler.mapper_template'
-            :return: base64 encoded hccapx file for provided parameter
-        '''
+            :return: 22000 format file for provided parameter
+        """
         if not os.path.isfile(crt_capture["path"]):
             Configuration.logger.error("File '%s' from id '%s' does not exist." %
                                        (crt_capture['path'], crt_capture["id"]))
@@ -147,44 +164,36 @@ class Scheduler:
         if crt_capture["file_type"] == "16800":
             return Scheduler._get_pmkid_mac(crt_capture["path"], crt_capture["mac"])
 
-        if crt_capture["handshake_type"] == "PMKID":
-            flag = "-z"
-        elif crt_capture["handshake_type"] == "WPA":
-            flag = "-o"
-        else:
+        if crt_capture["file_type"] == "22000":
+            return Scheduler._get_capture_mac(crt_capture["path"], crt_capture["mac"])
+
+        if not (crt_capture["handshake_type"] == "PMKID" or crt_capture["handshake_type"] == "WPA"):
             Configuration.logger.error("Unknown type of attack '%s' in entry '%s'" %
                                        (crt_capture["handshake_type"], crt_capture))
             return None
 
-        mac_addr = crt_capture["mac"].replace(":", "")
-
         f, temp_filename = mkstemp(prefix="psknow_backend")
 
-        # Filter packets based on bssid so we attack only one wifi in a file with multiple captures
-        hcx_cmd = "hcxpcaptool %s %s %s --filtermac=%s" %\
-                  (flag, temp_filename, crt_capture["path"], mac_addr)
-
-        stdout = Process(hcx_cmd, crit=True).stdout()
+        cmd = "hcxpcapngtool -o %s %s" % (temp_filename, crt_capture["path"])
+        stdout = Process(cmd, crit=True).stdout()
 
         if "written to" not in stdout:
             os.remove(temp_filename)
             return None
 
-        with open(f, "rb") as fd:
-            enc = b64encode(fd.read()).decode("utf8")
-            os.unlink(temp_filename)
-            return enc
-
+        capture = Scheduler._get_capture_mac(temp_filename, crt_capture["mac"])
+        os.remove(temp_filename)
+        return capture
 
     @staticmethod
-    def get_hccapx_data(crt_capture):
-        '''
+    def get_22000_data(crt_capture):
+        """
             This is a temporary fix needed until a better result checking
             method is implemented. This should be removed as soon as possible.
             Do not use this method.
         :param crt_capture:
         :return:
-        '''
+        """
         intermediary = dict()
         intermediary['date_added'] = crt_capture['date_added']
         intermediary['priority'] = crt_capture['priority']
@@ -198,10 +207,7 @@ class Scheduler:
         intermediary['rule_prio'] = -1
         intermediary["handshake_type"] = crt_capture["handshake"]["handshake_type"]
 
-        if intermediary["file_type"] == "16800":
-            raise ValueError("Operation not supported for 16800 files!")
-
-        return b64decode(Scheduler._get_hccapx_data(intermediary).encode("utf8"))
+        return Scheduler._get_22000_data(intermediary)
 
     @staticmethod
     def get_all_possible_rules(client_capabilities):
@@ -251,7 +257,7 @@ class Scheduler:
 
             Scheduler._reserve_handshake(best_handshake["id"], apikey, best_handshake["next_rule"])
 
-        task["handshake"]["data"] = Scheduler._get_hccapx_data(best_handshake)
+        task["handshake"]["data"] = Scheduler._get_22000_data(best_handshake)
 
         if task["handshake"]["data"] is None:
             Scheduler.release_handshake(best_handshake["id"])
