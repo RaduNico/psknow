@@ -117,7 +117,7 @@ class Scheduler:
         return result, error
 
     @staticmethod
-    def _get_pmkid_mac(file, mac_addr):
+    def _get_pmkid_from16800_mac(file, mac_addr):
         """ return PMKID from a .16800 file that matches the given MAC """
         with open(file) as fd:
             for line in fd:
@@ -132,7 +132,7 @@ class Scheduler:
             return None
 
     @staticmethod
-    def _get_capture_mac(file, mac_addr):
+    def _get_capture_from22000_mac(file, mac_addr):
         """ return PMKID/handshake from a .22000 file that matches the given MAC """
         with open(file) as fd:
             for line in fd:
@@ -162,10 +162,10 @@ class Scheduler:
             return None
 
         if crt_capture["file_type"] == "16800":
-            return Scheduler._get_pmkid_mac(crt_capture["path"], crt_capture["mac"])
+            return Scheduler._get_pmkid_from16800_mac(crt_capture["path"], crt_capture["mac"])
 
         if crt_capture["file_type"] == "22000":
-            return Scheduler._get_capture_mac(crt_capture["path"], crt_capture["mac"])
+            return Scheduler._get_capture_from22000_mac(crt_capture["path"], crt_capture["mac"])
 
         if not (crt_capture["handshake_type"] == "PMKID" or crt_capture["handshake_type"] == "WPA"):
             Configuration.logger.error("Unknown type of attack '%s' in entry '%s'" %
@@ -181,7 +181,7 @@ class Scheduler:
             os.remove(temp_filename)
             return None
 
-        capture = Scheduler._get_capture_mac(temp_filename, crt_capture["mac"])
+        capture = Scheduler._get_capture_from22000_mac(temp_filename, crt_capture["mac"])
         os.remove(temp_filename)
         return capture
 
