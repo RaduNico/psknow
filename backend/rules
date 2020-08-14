@@ -372,5 +372,38 @@
 		"examples": ["something1*", "Something(8", "7*something", "<3Something"],
 		"reqs": ["hashcat", "john", "dic_lc_eng.txt", "john-local.conf"],
 		"link": ""
+	},
+	{
+		"name": "WikiSpanish",
+		"type": "wordlist",
+		"priority": 10,
+		"path": "eswiki",
+		"wordsize": 4800,
+		"desc": "Spanish words from wikipedia dumps (english alphabet, without special characters)",
+		"examples": ["gracias", "hablo", "manana"],
+		"reqs": ["hashcat", "eswiki"],
+		"link": "/dict?dict=eswiki"
+	},
+	{
+		"name": "WikiFrench",
+		"type": "wordlist",
+		"priority": 10,
+		"path": "frwiki",
+		"wordsize": 4800,
+		"desc": "French words from wikipedia dumps (english alphabet, without special characters)",
+		"examples": ["bonjour", "garcon", "chouette"],
+		"reqs": ["hashcat", "frwiki"],
+		"link": "/dict?dict=frwiki"
+	},
+	{
+		"name": "WikiGerman",
+		"type": "wordlist",
+		"priority": 10,
+		"path": "dewiki",
+		"wordsize": 4800,
+		"desc": "German words from wikipedia dumps (english alphabet, without special characters)",
+		"examples": ["lacheln", "Deutscher", "Glück"],
+		"reqs": ["hashcat", "dewiki"],
+		"link": "/dict?dict=dewiki"
 	}
 ]
