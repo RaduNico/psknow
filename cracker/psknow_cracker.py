@@ -9,7 +9,6 @@ import traceback
 
 from time import sleep
 from tempfile import mkstemp
-from base64 import b64decode
 from datetime import datetime
 
 from config import Configuration
@@ -91,10 +90,8 @@ class Cracker:
         scrambler = None
 
         # Append hash identification based on attack type
-        if attack_type == "PMKID":
-            attack_command += " -m 16800"
-        elif attack_type == "WPA":
-            attack_command += " -m 2500"
+        if attack_type == "PMKID" or attack_type == "WPA":
+            attack_command += " -m 22000"
         else:
             die(True, "Unsupported attack type %s" % attack_type)
 
@@ -288,12 +285,8 @@ class Cracker:
 
         _, Cracker.path_temp_file = mkstemp(prefix="psknow_crack")
 
-        if work["handshake"]["file_type"] == "16800":
-            with open(Cracker.path_temp_file, "w") as fd:
-                fd.write(work["handshake"]["data"])
-        else:
-            with open(Cracker.path_temp_file, "wb") as fd:
-                fd.write(b64decode(work["handshake"]["data"].encode("utf8")))
+        with open(Cracker.path_temp_file, "w") as fd:
+            fd.write(work["handshake"]["data"])
 
         # Memorize attack type - we need it to decode the output
         attack_type = work["handshake"]["handshake_type"]

@@ -44,12 +44,13 @@
   <div class="container">
 
     <label for="username"><b>Username</b></label>
-    <input type="text" placeholder="Enter Username" name="username" required="">
+    <input type="text" placeholder="Enter Username" id="username" name="username" required="">
 
     <label for="password"><b>Password</b></label>
-    <input type="password" name="password" placeholder="Enter Password" required="">
+    <input type="password" name="password" id="password" placeholder="Enter Password" required="">
 
     <button type="submit">Login</button>
+    <a href="{{ url_for('blob_api.reset_password') }}"><p style="text-align:center">Forgot password?</p></a>
   </div>
 </form>
 

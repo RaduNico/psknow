@@ -73,7 +73,7 @@ class Configuration(object):
     save_file_location = 'handshakes'
 
     # Handshake verification
-    pmkid_regex = re.compile("^[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)[\n]?$")
+    pmkid_16800_regex = re.compile("^[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)[\n]?$")
     username_regex = re.compile("^[a-zA-Z][-_.0-9a-zA-Z]*$")
     hashcat_left_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*](.*)[\n]?$")
     # aircrack_regex = re.compile("^ {0,3}[0-9]{0,3} {2}([0-9A-Fa-f:]{17}) {2}(.*) {2}"
@@ -83,10 +83,13 @@ class Configuration(object):
     #                             "WPA \\([0-9*] handshake.*\\)|"
     #                             "Unknown)[\n]?$")
 
+    regex_pmkid = re.compile("WPA\\*01\\*[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)(\\*+)[\n]?$")
+    regex_handshake = re.compile("WPA\\*02\\*[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)\\*[0-9a-f]{64}"
+                                 "\\*[0-9a-f]*\\*[0-9a-f]{2}[\n]?$")
     empty_pot_path = 'config_files/empty_potfile'
 
     # Accepted upload extensions
-    accepted_extensions = {"cap", "pcap", "16800", "pcapng"}
+    accepted_extensions = {"cap", "pcap", "16800", "pcapng", "22000"}
 
     # Dictionaries allowed for download
     dictionary_names = ["wordlist-top4800-probable.txt", "dic_lc_rom.txt", "dic_lc_eng.txt", "nume_bac2018.txt",

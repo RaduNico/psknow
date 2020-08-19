@@ -69,7 +69,11 @@ def require_key(f):
         except (jwt.exceptions.InvalidSignatureError, jwt.exceptions.DecodeError):
             return jsonify({"success": False, "reason": "Invalid API key!"})
 
-        user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except
+        try:
+            user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except
+        except Exception as e:
+            Configuration.logger.error("Error occured while retrieving username from database: %s" % e)
+            return None, "Internal server error 101"
 
         if user_entry is None:
             return jsonify({"success": False, "reason": "Invalid user '%s'" % decoded_api_key["user"]})
@@ -426,27 +430,15 @@ def is_password(password, db_entry):
 
     try:
         Configuration.logger.info("%s" % db_entry)
-        if db_entry["file_type"] == "16800":
-            pmkid = ""
+        capture = Scheduler.get_22000_data(db_entry)
+        if capture.startswith("WPA"):
+            capture = capture[7:-3]
 
-            with open(db_entry["path"]) as fd:
-                for line in fd:
-                    matchobj = Configuration.pmkid_regex.match(line)
-                    if matchobj.group(1) == db_entry["handshake"]["MAC"].replace(":", ""):
-                        pmkid = line.replace("\n", "")
-                        break
+        if capture == "":
+            Configuration.logger.error("Could not match database MAC to 16800/22000 file to retrieve PMKID/handshake")
+            return False, "Failed to retrieve PMKID/handshake from file to password check."
 
-            if pmkid == "":
-                Configuration.logger.error("Could not match database MAC to 16800 file to retrieve PMKID")
-                return False, "Failed to retrieve PMKID from file for password check."
-
-            wifi_hash = "-I %s" % pmkid
-        else:
-            hcxdata = Scheduler.get_hccapx_data(db_entry)
-            with open(hcx_temp_file, "wb") as fd:
-                fd.write(hcxdata)
-            wifi_hash = hcx_temp_file
-
+        wifi_hash = "-I %s" % capture
         command = 'aircrack-ng %s -w %s --bssid %s' % (wifi_hash, password_temp_file, db_entry["handshake"]["MAC"])
 
         process = Process(command)
