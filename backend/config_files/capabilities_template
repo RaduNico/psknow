@@ -73,5 +73,47 @@
 		"path": "john-local.conf",
 		"sha1": "",
 		"last_change": null
-	}
+	},
+
+	"dewiki.txt": {
+        	"type": "dict",
+        	"path": "dict/dewiki.txt",
+        	"sha1": "",
+        	"last_change": null
+   	},
+
+    "frwiki.txt": {
+        "type": "dict",
+        "path": "dict/frwiki.txt",
+        "sha1": "",
+        "last_change": null
+    },
+
+    "eswiki.txt": {
+        "type": "dict",
+        "path": "dict/eswiki.txt",
+        "sha1": "",
+        "last_change": null
+    },
+
+   	"titles-dewiki.txt": {
+        	"type": "dict",
+        	"path": "dict/titles-dewiki.txt",
+        	"sha1": "",
+        	"last_change": null
+   	},
+
+    "titles-frwiki.txt": {
+        "type": "dict",
+        "path": "dict/titles-frwiki.txt",
+        "sha1": "",
+        "last_change": null
+    },
+
+    "titles-eswiki.txt": {
+        "type": "dict",
+        "path": "dict/titles-eswiki.txt",
+        "sha1": "",
+        "last_change": null
+   }
 }
