@@ -52,6 +52,7 @@ class Configuration(object):
 
                     "users": [],
                     "priority": 0,
+                    "languages": [],
                     "details": ""}
 
     default_handshake = {  # Metadata
@@ -293,6 +294,7 @@ class Configuration(object):
         path = os.path.join(Configuration.static_folder, "crack", path.split("/")[-1])
 
         if not os.path.exists(path):
+            Configuration.logger.error("Could not get mtime. File not found: %s" % path)
             return None, path
 
         return os.stat(path).st_mtime, path
@@ -362,7 +364,7 @@ class Configuration(object):
                         Configuration.logger.info("File '%s' was updated, reloading data" % name)
                         Configuration.set_cap_dict_data(name, data, final_dict)
                     else:
-                        Configuration.logger.debug("Loaded data for '%s' from generated file." % name)
+                        Configuration.logger.info("Loaded data for '%s' from generated file." % name)
                         final_dict[name] = deepcopy(old_cap_dict[name])
                 # Data for this entry is not present in generated file
                 else:

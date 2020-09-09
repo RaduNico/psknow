@@ -320,7 +320,6 @@ def checkfile_v1(**kwargs):
 @require_key
 def getmissing_v1(**_):
     client_capabilities = request.json.get("capabilities")
-
     if client_capabilities is None:
         return jsonify({"success": False, "reason": "Capabilities were not sent!"})
 
@@ -331,6 +330,7 @@ def getmissing_v1(**_):
         for req in rule["reqs"]:
             if req in client_capabilities and req not in rule_reqs:
                 rule_reqs.add(req)
+
                 if req not in Configuration.programs and \
                         client_capabilities[req] != Configuration.cap_dict[req]["sha1"]:
 

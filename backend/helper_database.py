@@ -47,7 +47,6 @@ if len(sys.argv) > 1 and sys.argv[1] == "cristi":
     with open("dump_cristi.json", "w") as fd:
         json.dump(lst, fd, indent=4)
 
-    print("muie")
     sys.exit(0)
 
 # Treat simple fields
@@ -57,6 +56,9 @@ for entry in all_entries:
 
     if "reserved" not in clean_entry:
         clean_entry["reserved"] = None
+
+    if "languages" not in clean_entry:
+        clean_entry["languages"] = None
 
     if "user" in clean_entry:
         del clean_entry["user"]

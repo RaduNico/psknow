@@ -311,6 +311,7 @@ def check_handshake(file_path, filename, wifi_entry):
 @not_admin
 def upload_file():
     if request.method == 'GET':
+
         return render_template('upload.html')
 
     # Check if database is not down
@@ -325,6 +326,8 @@ def upload_file():
         return redirect(request.url)
 
     files = request.files.getlist('file')
+    languages = request.form.getlist('language')
+
     Configuration.logger.info(files)
     # Check for empty filename
     if len(files) == 0:
@@ -351,6 +354,7 @@ def upload_file():
         new_entry["date_added"] = datetime.datetime.now()
         new_entry["users"] = [current_user.get_id()]
         new_entry["priority"] = 0
+        new_entry["languages"] = languages
 
         # Validate handshake and get file type and handshake type
         valid_handshake, wifi_entries = check_handshake(tmp_path, file.filename, new_entry)

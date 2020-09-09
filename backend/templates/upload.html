@@ -1,7 +1,43 @@
 <html>
 	<title>PSKnow</title>
+	<style>
+		.multiselect {
+		  width: 200px;
+		}
+
+		.selectBox {
+		  position: relative;
+		}
+
+		.selectBox select {
+		  width: 100%;
+		  font-weight: bold;
+		}
+
+		.overSelect {
+		  position: absolute;
+		  left: 0;
+		  right: 0;
+		  top: 0;
+		  bottom: 0;
+		}
+
+		#checkboxes {
+		  display: none;
+		  border: 1px #dadada solid;
+		}
+
+		#checkboxes label {
+		  display: block;
+		}
+
+		#checkboxes label:hover {
+		  background-color: #1e90ff;
+		}
+	</style>
 	<head>
 		<link rel="stylesheet" type="text/css" href="/css/navbar.css">
+		<meta charset="utf-8"/>
 	</head>
 	<body>
 		<ul class=navbar>
@@ -16,11 +52,29 @@
 		<br>
 		<br>
 
-		<h2>Upload capture file(s)</h2>
+
+
 		<form action = "/upload/" method = "POST" enctype = "multipart/form-data">
-			<input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng,.22000" multiple>
+			<h2>Step 1: Select languages for capture file(s)</h2>
+
+				  <label for="english">
+					<input type="checkbox" id="english" name="language" value="english"/>English</label>
+				  <label for="french">
+					<input type="checkbox" id="french" name="language" value="french"/>Français</label>
+				  <label for="romanian">
+					<input type="checkbox" id="romanian" name="language" value="romanian"/>Română</label>
+				  <label for="deutsch">
+					<input type="checkbox" id="deutsch" name="language" value="deutsch"/>Deutsch</label>
+				  <label for="spanish">
+					<input type="checkbox" id="spanish" name="language" value="spanish"/>Español</label>
+				 <br><br><br>
+
+			<h2>Step 2: Select capture file(s)</h2>
+			<input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng,.22000" multiple> <br><br><br>
+			<h2>Step 3: Upload capture file(s)</h2>
 			<input type = "submit">
 			<br>
+
 			{% with messages = get_flashed_messages(with_categories=true) %}
 				{% if messages %}
 					{% for type,message in messages %}
@@ -40,6 +94,23 @@
 					{% endfor %}
 				{% endif %}
 			{% endwith %}
+
 		</form>
+
+		<br>
+		<script>
+			var expanded = false;
+			function toggleCheckboxesVisibility() {
+			  var checkboxes = document.getElementById("checkboxes");
+			  if (!expanded) {
+				checkboxes.style.display = "block";
+				expanded = true;
+			  } else {
+				checkboxes.style.display = "none";
+				expanded = false;
+			  }
+			}
+		</script>
+
 	</body>
 </html>

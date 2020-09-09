@@ -2,6 +2,7 @@ import random
 import string
 
 from werkzeug.exceptions import abort
+import json
 from .config import Configuration
 from .user import User, enc_bcrypt
 from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
@@ -45,12 +46,27 @@ def get_uncracked_tuple(document):
     result["mac"] = handshake["MAC"]
     result["hs_type"] = handshake["handshake_type"]
     result["date_added"] = document["date_added"].strftime('%H:%M - %d.%m.%Y')
+
     if handshake["active"]:
         result["tried_rules"] = "Trying rule %s" % document["reserved"]["tried_rule"]
         result["eta"] = handshake["eta"]
-    else:
-        result["tried_rules"] = "%s/%s" % (len(handshake["tried_dicts"]), Configuration.number_rules)
-        result["eta"] = ""
+        return result
+
+    try:
+        with open('rules') as json_data:
+            rules = json.load(json_data)
+    except Exception as e:
+        Configuration.log_fatal("Error trying to load rules data: %s" % e)
+
+    hs_rules = 0
+    for rule in rules:
+        for language in document["languages"]:
+            if rule["languages"] == language or rule["languages"] == "none":
+                hs_rules = hs_rules + 1
+                break
+
+    result["tried_rules"] = "%s/%s" % (len(handshake["tried_dicts"]), int(hs_rules))
+    result["eta"] = ""
 
     return result
 
