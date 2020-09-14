@@ -1,116 +1,88 @@
 <html>
-	<title>PSKnow</title>
-	<style>
-		.multiselect {
-		  width: 200px;
-		}
+   <title>PSKnow</title>
+   <style>
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 50%;
+        width: 50%;
+      }
+   </style>
 
-		.selectBox {
-		  position: relative;
-		}
+   <head>
+      <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+      <link rel="stylesheet" href="https://js.arcgis.com/4.16/esri/themes/light/main.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.default.min.css">
+      <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+      <meta charset="utf-8"/>
+      <script src="http://code.jquery.com/jquery-1.10.2.js" type="text/javascript"></script>
+      <script src="../static/uploading.js"></script>
+      <script src="../static/selectize.js"></script>
+      <script src="https://js.arcgis.com/4.16/"></script>
+   </head>
 
-		.selectBox select {
-		  width: 100%;
-		  font-weight: bold;
-		}
-
-		.overSelect {
-		  position: absolute;
-		  left: 0;
-		  right: 0;
-		  top: 0;
-		  bottom: 0;
-		}
-
-		#checkboxes {
-		  display: none;
-		  border: 1px #dadada solid;
-		}
-
-		#checkboxes label {
-		  display: block;
-		}
-
-		#checkboxes label:hover {
-		  background-color: #1e90ff;
-		}
-	</style>
-	<head>
-		<link rel="stylesheet" type="text/css" href="/css/navbar.css">
-		<meta charset="utf-8"/>
-	</head>
-	<body>
-		<ul class=navbar>
-			<li><a href='/'>Home</a></li>
-			<li><a class="active" href='/upload/'>Upload</a></li>
-			<li><a href='/statuses/'>Statuses</a></li>
-			<li><a href='/api/'>API</a></li>
-			<li><a href='/profile/'>Profile</a></li>
-			<li style="float:right"><a href='/logout/'>Logout</a></li>
-		</ul>
-
-		<br>
-		<br>
+   <body>
+      <ul class=navbar>
+         <li><a href='/'>Home</a></li>
+         <li><a class="active" href='/upload/'>Upload</a></li>
+         <li><a href='/statuses/'>Statuses</a></li>
+         <li><a href='/api/'>API</a></li>
+         <li><a href='/profile/'>Profile</a></li>
+         <li style="float:right"><a href='/logout/'>Logout</a></li>
+      </ul>
+      <br><br>
 
 
+      <form action = "/upload/" method = "POST" enctype = "multipart/form-data">
+         <h2>Step 1: Double-click on the area where you took the capture file(s):</h2>
+         <label for="coord"><b>Coordinates:</b></label>
+         <input type="text" id="coord" name="coord"><br><br>
+         <div id="viewDiv"></div>
+         <br><br>
 
-		<form action = "/upload/" method = "POST" enctype = "multipart/form-data">
-			<h2>Step 1: Select languages for capture file(s)</h2>
+         <h2>Step 2: (optional) Do you have any password suggestions for the capture file(s)? Insert them here!</h2>
+         <input type="text" id="tags" name="tags">
+         <br><br>
 
-				  <label for="english">
-					<input type="checkbox" id="english" name="language" value="english"/>English</label>
-				  <label for="french">
-					<input type="checkbox" id="french" name="language" value="french"/>Français</label>
-				  <label for="romanian">
-					<input type="checkbox" id="romanian" name="language" value="romanian"/>Română</label>
-				  <label for="deutsch">
-					<input type="checkbox" id="deutsch" name="language" value="deutsch"/>Deutsch</label>
-				  <label for="spanish">
-					<input type="checkbox" id="spanish" name="language" value="spanish"/>Español</label>
-				 <br><br><br>
+         <h2>Step 3: Select languages for capture file(s)</h2>
+         <label for="english">
+            <input type="checkbox" id="english" name="language" value="english"/>English</label>
+         <label for="french">
+            <input type="checkbox" id="french" name="language" value="french"/>Français</label>
+         <label for="romanian">
+            <input type="checkbox" id="romanian" name="language" value="romanian"/>Română</label>
+         <label for="deutsch">
+            <input type="checkbox" id="deutsch" name="language" value="deutsch"/>Deutsch</label>
+         <label for="spanish">
+            <input type="checkbox" id="spanish" name="language" value="spanish"/>Español</label>
+         <br><br>
 
-			<h2>Step 2: Select capture file(s)</h2>
-			<input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng,.22000" multiple> <br><br><br>
-			<h2>Step 3: Upload capture file(s)</h2>
-			<input type = "submit">
-			<br>
+         <h2>Step 4: Select capture file(s)</h2>
+         <input type = "file" name = "file" accept=".cap,.pcap,.16800,.pcapng,.22000" multiple>
+         <br><br>
 
-			{% with messages = get_flashed_messages(with_categories=true) %}
-				{% if messages %}
-					{% for type,message in messages %}
-						{% if type == 'success' %}
-						<div style='color:green'>
-						{{ message }}
-						</div>
-						{% elif type == 'warning' %}
-						<div style='color:OrangeRed'>
-						{{ message }}
-						</div>
-						{% else %}
-						<div style='color:red'>
-						{{ message }}
-						</div>
-						{% endif %}
-					{% endfor %}
-				{% endif %}
-			{% endwith %}
+         <h2>Step 5: Upload capture file(s)</h2>
+         <input type = "submit">
 
-		</form>
-
-		<br>
-		<script>
-			var expanded = false;
-			function toggleCheckboxesVisibility() {
-			  var checkboxes = document.getElementById("checkboxes");
-			  if (!expanded) {
-				checkboxes.style.display = "block";
-				expanded = true;
-			  } else {
-				checkboxes.style.display = "none";
-				expanded = false;
-			  }
-			}
-		</script>
-
-	</body>
+         {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+               {% for type,message in messages %}
+                  {% if type == 'success' %}
+                  <div style='color:green'>
+                  {{ message }}
+                  </div>
+                  {% elif type == 'warning' %}
+                  <div style='color:OrangeRed'>
+                  {{ message }}
+                  </div>
+                  {% else %}
+                  <div style='color:red'>
+                  {{ message }}
+                  </div>
+                  {% endif %}
+               {% endfor %}
+            {% endif %}
+         {% endwith %}
+      </form>
+   </body>
 </html>
