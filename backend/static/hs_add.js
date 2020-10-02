@@ -17,7 +17,7 @@ $(document).ready(function() {
 require([
       "esri/Map",
       "esri/views/MapView",
-      "esri/widgets/Search"
+      "esri/widgets/Search",
 ], function(Map, MapView, Search) {
 
   var map = new Map({
@@ -56,6 +56,12 @@ require([
     showCoordinates(view.toMap({ x: evt.x, y: evt.y }));
   });
 
+  //*** Add event to set coordinates on click in the textbox below the map ***//
+   view.on(["double-click"], function(evt) {
+     pt = view.toMap({ x: evt.x, y: evt.y });
+     document.getElementsByName('coord')[0].value = "Lat: " + pt.latitude.toFixed(3) + ", " + "Lon: " + pt.longitude.toFixed(3);
+   });
+
   //*** Add Search widget ***//
   var search = new Search({
     view: view
@@ -80,14 +86,5 @@ require([
         });
     }
   });
-
-  function showPopup(address, pt) {
-    view.popup.open({
-      title:  + Math.round(pt.longitude * 100000)/100000 + ", " + Math.round(pt.latitude * 100000)/100000,
-      content: address,
-      location: pt
-     });
-  }
-
   });
 });

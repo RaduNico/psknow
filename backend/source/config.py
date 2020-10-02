@@ -44,7 +44,7 @@ class Configuration(object):
                     "location": {"address": "",
                                  "city": "",
                                  "coordinates": [0.0, 0.0],
-                                 "keyword": ""},
+                                 "keyword": []},
 
                     "path": None,
                     "handshake": None,
@@ -72,6 +72,9 @@ class Configuration(object):
 
     # Handshake save folder
     save_file_location = 'handshakes'
+
+    # Number of languages
+    nr_languages = 5
 
     # Handshake verification
     pmkid_16800_regex = re.compile("^[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)[\n]?$")

@@ -1,480 +1,891 @@
-[{
-		"name": "hot_words",
-		"type": "scrambler",
-		"priority": 5,
-		"path": "",
-		"languages": "none",
-		"wordsize": 0,
-		"desc": "John the ripper Jumbo rules applied on some hot words (wifi/password/parola) and on variations of the essid",
-		"examples": ["password123", "parola123", "<EESID>123", "<ESS>"],
-		"reqs": ["john", "hashcat"],
-		"link": ""
-	},
-	{
-		"name": "top4800",
-		"type": "wordlist",
-		"priority": 10,
-		"path": "wordlist-top4800-probable.txt",
-		"languages": "none",
-		"wordsize": 4800,
-		"desc": "Top 4800 wpa2 passwords taken from SecLists",
-		"examples": ["password", "12345678", "abcd1234", "q1w2e3r4"],
-		"reqs": ["hashcat", "wordlist-top4800-probable.txt"],
-		"link": "/dict?dict=wordlist-top4800-probable.txt"
-	},
-	{
-		"name": "dic_lc_rom",
-		"type": "wordlist",
-		"priority": 20,
-		"path": "dic_lc_rom.txt",
-		"languages": "romanian",
-		"wordsize": 72743,
-		"desc": "A Romanian wordlist containing 72K words",
-		"examples": ["pirat", "pirata", "piratare", "piraterie", "girafa", "stanga"],
-		"reqs": ["hashcat", "dic_lc_rom.txt"],
-		"link": "/dict?dict=dic_lc_rom.txt"
-	},
-	{
-		"name": "nume_bac2018",
-		"type": "wordlist",
-		"priority": 22,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"wordsize": 33666,
-		"desc": "A list comprised of 33K names found in romania sorted by popularity",
-		"examples": ["maria", "andrei", "cristian", "cristi"],
-		"reqs": ["hashcat", "nume_bac2018.txt"],
-		"link": "/dict?dict=nume_bac2018.txt"
-	},
-	{
-		"name": "dic_lc_eng",
-		"type": "wordlist",
-		"priority": 24,
-		"path": "dic_lc_eng.txt",
-		"languages": "english",
-		"wordsize": 63769,
-		"desc": "An English wordlist containing 63K words. Curated from top100K wiktionary words.",
-		"examples": ["something", "enough", "woman", "house", "night"],
-		"reqs": ["hashcat", "dic_lc_eng.txt"],
-		"link": "/dict?dict=dic_lc_eng.txt"
-	},
-	{
-		"name": "Simple123_rom",
-		"type": "john",
-		"priority": 30,
-		"path": "dic_lc_rom.txt",
-		"languages": "romanian",
-		"rule": "Simple123",
-		"wordsize": 1289424,
-		"desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on Romanian wordlist",
-		"examples": ["bautura123", "Bautura123", "Bautura1", "123bautura", "12Bautura"],
-		"reqs": ["hashcat", "john", "dic_lc_rom.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "Simple123_bac",
-		"type": "john",
-		"priority": 32,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"rule": "Simple123",
-		"wordsize": 521188,
-		"desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on Romanian names",
-		"examples": ["gabriela123", "Gabriela123", "Gabriela1", "123gabriela", "12Gabriela"],
-		"reqs": ["hashcat", "john", "nume_bac2018.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "Simple123_eng",
-		"type": "john",
-		"priority": 34,
-		"path": "dic_lc_eng.txt",
-		"languages": "english",
-		"rule": "Simple123",
-		"wordsize": 999964,
-		"desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on English words",
-		"examples": ["something123", "Something123", "Something1", "123something", "12Something"],
-		"reqs": ["hashcat", "john", "dic_lc_eng.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "hibpv4_top10mil",
-		"type": "wordlist",
-		"priority": 38,
-		"path": "top_10mil_hibp.txt",
-		"languages": "none",
-		"wordsize": 10000000,
-		"desc": "Top 10 mil passwords in frequency from hibp v4",
-		"examples": ["love4ever", "ilikepie", "candy101", "nietzsche"],
-		"reqs": ["hashcat", "top_10mil_hibp.txt"],
-		"link": ""
-	},
-	{
-		"name": "SimpleNums_rom",
-		"type": "john",
-		"priority": 40,
-		"path": "dic_lc_rom.txt",
-		"languages": "romanian",
-		"rule": "SimpleNums",
-		"wordsize": 57496000,
-		"desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on Romanian words. Does not overlap with Simple123_rom.",
-		"examples": ["bautura64", "Bautura13", "Bautura18", "69bautura", "42Bautura"],
-		"reqs": ["hashcat", "john", "dic_lc_rom.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleNums_bac",
-		"type": "john",
-		"priority": 42,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"rule": "SimpleNums",
-		"wordsize": 10567244,
-		"desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on Romanian names. Does not overlap with Simple123_bac.",
-		"examples": ["gabriela64", "Gabriela13", "Gabriela18", "69gabriela", "42Gabriela"],
-		"reqs": ["hashcat", "john", "nume_bac2018.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleNums_eng",
-		"type": "john",
-		"priority": 44,
-		"path": "dic_lc_eng.txt",
-		"languages": "english",
-		"rule": "SimpleNums",
-		"wordsize": 20527108,
-		"desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on English words. Does not overlap with Simple123_eng.",
-		"examples": ["something64", "Something13", "Something18", "69something", "42Something"],
-		"reqs": ["hashcat", "john", "dic_lc_eng.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "close_dates_sep",
-		"type": "generated",
-		"priority": 50,
-		"path": "date_generator.py",
-		"languages": "none",
-		"command": " 1900 2100 -./\\:_ yes",
-		"wordsize": 1862328,
-		"desc": "All dates between years 1900-2100 using formats (DDsMMsYYYY, MMsDDsYYYY, YYYYsMMsDD, DDsMMsYY, MMsDDsYY, YYsMMsDD) s='-./\\:_'",
-		"examples": ["17-10-90", "05/31/2005", "10-12-1901", "2099:12:12"],
-		"reqs": ["hashcat", "date_generator.py"],
-		"link": ""
-	},
-	{
-		"name": "Jumbo_bac",
-		"type": "john",
-		"priority": 55,
-		"path": "nume_comune_bac2018.txt",
-		"languages": "romanian",
-		"rule": "Jumbo",
-		"wordsize": 13795144,
-		"desc": "John the ripper Jumbo rules applied on more popular romanian names",
-		"examples": [],
-		"reqs": ["hashcat", "john", "nume_comune_bac2018.txt", "john-local.conf"],
-		"link": "/dict?dict=nume_comune_bac2018.txt"
-	},
-	{
-		"name": "Jumbo_eng",
-		"type": "john",
-		"priority": 57,
-		"path": "top_2500_engl.txt",
-		"languages": "english",
-		"rule": "Jumbo",
-		"wordsize": 13810205,
-		"desc": "John the ripper Jumbo rules applied on top 2500 English words (at least 4 letters)",
-		"examples": [],
-		"reqs": ["hashcat", "john", "top_2500_engl.txt", "john-local.conf"],
-		"link": "/dict?dict=top_2500_engl.txt"
-	},
-	{
-		"name": "RugeoSamona",
-		"type": "john",
-		"priority": 58,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"rule": "RugeoSamona",
-		"wordsize": 28707702,
-		"desc": "Custom rules that involve mostly blowjobs",
-		"examples": ["PuieMonta", "SugeoRamona", "MuieAndrei", "muieana1"],
-		"reqs": ["hashcat", "john", "nume_bac2018.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "historic_dates_sep",
-		"type": "generated",
-		"priority": 60,
-		"path": "date_generator.py",
-		"languages": "none",
-		"command": " 0 1900 -./\\:_",
-		"wordsize": 12300600,
-		"desc": "All dates between years 0-1900 using formats (DDsMMsYYYY, MMsDDsYYYY, YYYYsMMsDD) s='-./\\:_'",
-		"examples": ["17-10-1500", "05/31/1100", "10-12-0020", "1800:12:12"],
-		"reqs": ["hashcat", "date_generator.py"],
-		"link": ""
-	},
-	{
-		"name": "SimpleSymbol_rom",
-		"type": "john",
-		"priority": 70,
-		"path": "dic_lc_rom.txt",
-		"languages": "romanian",
-		"rule": "SimpleSymbol",
-		"wordsize": 7049216,
-		"desc": "Symbol appending, prepending and capitalization on Romanian words",
-		"examples": ["bautura*", "Bautura(", "&bautura", ":Bautura"],
-		"reqs": ["hashcat", "john", "dic_lc_rom.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleSymbol_bac",
-		"type": "john",
-		"priority": 72,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"rule": "SimpleSymbol",
-		"wordsize": 2280576,
-		"desc": "Symbol appending, prepending and capitalization on Romanian names",
-		"examples": ["gabriela*", "Gabriela,", "+gabriela", "+Gabriela"],
-		"reqs": ["hashcat", "john", "nume_bac2018.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleSymbol_eng",
-		"type": "john",
-		"priority": 74,
-		"path": "dic_lc_eng.txt",
-		"languages": "english",
-		"rule": "SimpleSymbol",
-		"wordsize": 4889472,
-		"desc": "Symbol appending, prepending and capitalization on English words",
-		"examples": ["something*", "Something*", "Something-", ".Something"],
-		"reqs": ["hashcat", "john", "dic_lc_eng.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleYears_rom",
-		"type": "john",
-		"priority": 80,
-		"path": "dic_lc_rom.txt",
-		"languages": "romanian",
-		"rule": "SimpleYears",
-		"wordsize": 57496000,
-		"desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on Romanian words",
-		"examples": ["bautura1993", "Bautura1943", "2001bautura", "2099Bautura"],
-		"reqs": ["hashcat", "john", "dic_lc_rom.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleYears_bac",
-		"type": "john",
-		"priority": 82,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"rule": "SimpleYears",
-		"wordsize": 26488000,
-		"desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on Romanian names",
-		"examples": ["gabriela1947", "Gabriela1919", "Gabriela2050", "2019Gabriela"],
-		"reqs": ["hashcat", "john", "nume_bac2018.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleYears_eng",
-		"type": "john",
-		"priority": 84,
-		"path": "dic_lc_eng.txt",
-		"languages": "english",
-		"rule": "SimpleYears",
-		"wordsize": 49391200,
-		"desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on English words",
-		"examples": ["something2001", "Something2006", "Something1992", "2011something"],
-		"reqs": ["hashcat", "john", "dic_lc_eng.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "future_dates_sep",
-		"type": "generated",
-		"priority": 90,
-		"path": "date_generator.py",
-		"languages": "none",
-		"command": " 2100 10000 -./\\:_",
-		"wordsize": 51144600,
-		"desc": "All dates between years 2100-9999 using formats (DDsMMsYYYY, MMsDDsYYYY, YYYYsMMsDD) s='-./\\:_'",
-		"examples": ["17-10-3001", "05/31/6050", "10-12-3030", "4242:12:12"],
-		"reqs": ["hashcat", "date_generator.py"],
-		"link": ""
-	},
-	{
-		"name": "EightDigits",
-		"type": "mask_hashcat",
-		"priority": 100,
-		"path": "",
-		"languages": "none",
-		"mask_hashcat": "?d?d?d?d?d?d?d?d",
-		"wordsize": 100000000,
-		"desc": "All eight digits numbers",
-		"examples": ["17592044", "62540891", "77554310", "12385977"],
-		"reqs": ["hashcat"],
-		"link": ""
-	},
-	{
-		"name": "RoPhone",
-		"type": "mask_hashcat",
-		"priority": 102,
-		"path": "",
-		"languages": "none",
-		"mask_hashcat": "07?d?d?d?d?d?d?d?d",
-		"wordsize": 100000000,
-		"desc": "All 10 digits phone numbers starting with '07'",
-		"examples": ["0745192433", "0723182955", "0744103020", "0712385977"],
-		"reqs": ["hashcat"],
-		"link": ""
-	},
-	{
-		"name": "ThreeYears",
-		"type": "filemask_hashcat",
-		"priority": 108,
-		"path": "three_years.hcmask",
-		"languages": "none",
-		"wordsize": 8000000,
-		"desc": "Concatenate three times the years from 1900 to 2099 without separators",
-		"examples": ["197519751975", "200320061990", "209919002099", "200220022002"],
-		"reqs": ["hashcat", "three_years.hcmask"],
-		"link": ""
-	},
-	{
-		"name": "hibpv4_10-100mil",
-		"type": "wordlist",
-		"priority": 110,
-		"path": "top_10-100mil_hibp.txt",
-		"languages": "none",
-		"wordsize": 90000000,
-		"desc": "Passwords from 10 to 100 mil in frequency from hibp v4",
-		"examples": ["horcrux9", "hehemanh", "dischead", "zvezdec123"],
-		"reqs": ["hashcat", "top_10-100mil_hibp.txt"],
-		"link": ""
-	},
-	{
-		"name": "hibpv4_rest",
-		"type": "wordlist",
-		"priority": 115,
-		"path": "rest_hibp.txt",
-		"languages": "none",
-		"wordsize": 335309807,
-		"desc": "The rest of the passwords from hibp v4",
-		"examples": ["zucadume", "z1280136311", "shania1357", "minhuck16"],
-		"reqs": ["hashcat", "rest_hibp.txt"],
-		"link": ""
-	},
-	{
-		"name": "SimpleSymbolNum_rom",
-		"type": "john",
-		"priority": 120,
-		"path": "dic_lc_rom.txt",
-		"languages": "romanian",
-		"rule": "SimpleSymbolNum",
-		"wordsize": 163873280,
-		"desc": "Symbol and number (both orders) appending, prepending and capitalization on Romanian words",
-		"examples": ["bautura6*", "Bautura(6", "Bautura3)", "1&bautura", ":3Bautura"],
-		"reqs": ["hashcat", "john", "dic_lc_rom.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleSymbolNum_bac",
-		"type": "john",
-		"priority": 122,
-		"path": "nume_bac2018.txt",
-		"languages": "romanian",
-		"rule": "SimpleSymbolNum",
-		"wordsize": 64821760,
-		"desc": "Symbol and number (both orders) appending, prepending and capitalization on Romanian names",
-		"examples": ["gabriela*1", "Gabriela/5", "+5gabriela", "9+Gabriela"],
-		"reqs": ["hashcat", "john", "nume_bac2018.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "SimpleSymbolNum_eng",
-		"type": "john",
-		"priority": 124,
-		"path": "dic_lc_eng.txt",
-		"languages": "english",
-		"rule": "SimpleSymbolNum",
-		"wordsize": 125073920,
-		"desc": "Symbol and number (both orders) appending, prepending and capitalization on English words",
-		"examples": ["something1*", "Something(8", "7*something", "<3Something"],
-		"reqs": ["hashcat", "john", "dic_lc_eng.txt", "john-local.conf"],
-		"link": ""
-	},
-	{
-		"name": "WikiSpanish",
-		"type": "wordlist",
-		"priority": 104,
-		"path": "eswiki.txt",
-		"languages": "spanish",
-		"wordsize": 36419672,
-		"desc": "Spanish words from wikipedia dumps (english alphabet, without special characters)",
-		"examples": ["gracias", "hablo", "manana"],
-		"reqs": ["hashcat", "eswiki.txt"],
-		"link": "/dict?dict=eswiki.txt"
-	},
-	{
-		"name": "WikiFrench",
-		"type": "wordlist",
-		"priority": 105,
-		"path": "frwiki.txt",
-		"languages": "french",
-		"wordsize": 41102851,
-		"desc": "French words from wikipedia dumps (english alphabet, without special characters)",
-		"examples": ["bonjour", "garcon", "chouette"],
-		"reqs": ["hashcat", "frwiki.txt"],
-		"link": "/dict?dict=frwiki.txt"
-	},
-	{
-		"name": "WikiGerman",
-		"type": "wordlist",
-		"priority": 106,
-		"path": "dewiki.txt",
-		"languages": "deutsch",
-		"wordsize": 139933096,
-		"desc": "German words from wikipedia dumps (english alphabet, without special characters)",
-		"examples": ["lacheln", "Deutscher", "Gluck"],
-		"reqs": ["hashcat", "dewiki.txt"],
-		"link": "/dict?dict=dewiki.txt"
-	},
-	{
-		"name": "WikiSpanishTitles",
-		"type": "wordlist",
-		"priority": 104,
-		"path": "titles-eswiki.txt",
-		"languages": "spanish",
-		"wordsize": 36419672,
-		"desc": "Spanish words from wikipedia dumps (english alphabet, without special characters)",
-		"examples": ["gracias", "hablo", "manana"],
-		"reqs": ["hashcat", "titles-eswiki.txt"],
-		"link": "/dict?dict=titles-eswiki.txt"
-	},
-	{
-		"name": "WikiFrenchTitles",
-		"type": "wordlist",
-		"priority": 105,
-		"path": "titles-frwiki.txt",
-		"languages": "french",
-		"wordsize": 41102851,
-		"desc": "French words from wikipedia dumps (english alphabet, without special characters)",
-		"examples": ["bonjour", "garcon", "chouette"],
-		"reqs": ["hashcat", "titles-frwiki.txt"],
-		"link": "/dict?dict=titles-frwiki.txt"
-	},
-	{
-		"name": "WikiGermanTitles",
-		"type": "wordlist",
-		"priority": 106,
-		"path": "titles-dewiki.txt",
-		"languages": "deutsch",
-		"wordsize": 139933096,
-		"desc": "German words from wikipedia dumps (english alphabet, without special characters)",
-		"examples": ["lacheln", "Deutscher", "Gluck"],
-		"reqs": ["hashcat", "titles-dewiki.txt"],
-		"link": "/dict?dict=titles-dewiki.txt"
-	}
+[
+    {
+        "name": "hot_words",
+        "type": "scrambler",
+        "priority": 5,
+        "path": "",
+        "wordsize": 0,
+        "languages": [
+            "none"
+        ],
+        "desc": "John the ripper Jumbo rules applied on some hot words (wifi/password/parola) and on variations of the essid",
+        "examples": [
+            "password123",
+            "parola123",
+            "<EESID>123",
+            "<ESS>"
+        ],
+        "reqs": [
+            "john",
+            "hashcat"
+        ],
+        "link": ""
+    },
+    {
+        "name": "top4800",
+        "type": "wordlist",
+        "priority": 10,
+        "path": "wordlist-top4800-probable.txt",
+        "wordsize": 4800,
+        "languages": [
+            "none"
+        ],
+        "desc": "Top 4800 wpa2 passwords taken from SecLists",
+        "examples": [
+            "password",
+            "12345678",
+            "abcd1234",
+            "q1w2e3r4"
+        ],
+        "reqs": [
+            "hashcat",
+            "wordlist-top4800-probable.txt"
+        ],
+        "link": "/dict?dict=wordlist-top4800-probable.txt"
+    },
+    {
+        "name": "dic_lc_rom",
+        "type": "wordlist",
+        "priority": 20,
+        "path": "dic_lc_rom.txt",
+        "wordsize": 72743,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "A Romanian wordlist containing 72K words",
+        "examples": [
+            "pirat",
+            "pirata",
+            "piratare",
+            "piraterie",
+            "girafa",
+            "stanga"
+        ],
+        "reqs": [
+            "hashcat",
+            "dic_lc_rom.txt"
+        ],
+        "link": "/dict?dict=dic_lc_rom.txt"
+    },
+    {
+        "name": "nume_bac2018",
+        "type": "wordlist",
+        "priority": 22,
+        "path": "nume_bac2018.txt",
+        "wordsize": 33666,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "A list comprised of 33K names found in romania sorted by popularity",
+        "examples": [
+            "maria",
+            "andrei",
+            "cristian",
+            "cristi"
+        ],
+        "reqs": [
+            "hashcat",
+            "nume_bac2018.txt"
+        ],
+        "link": "/dict?dict=nume_bac2018.txt"
+    },
+    {
+        "name": "dic_lc_eng",
+        "type": "wordlist",
+        "priority": 24,
+        "path": "dic_lc_eng.txt",
+        "wordsize": 63769,
+        "languages": [
+            "english"
+        ],
+        "desc": "An English wordlist containing 63K words. Curated from top100K wiktionary words.",
+        "examples": [
+            "something",
+            "enough",
+            "woman",
+            "house",
+            "night"
+        ],
+        "reqs": [
+            "hashcat",
+            "dic_lc_eng.txt"
+        ],
+        "link": "/dict?dict=dic_lc_eng.txt"
+    },
+    {
+        "name": "Simple123_rom",
+        "type": "john",
+        "priority": 30,
+        "path": "dic_lc_rom.txt",
+        "rule": "Simple123",
+        "wordsize": 1289424,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on Romanian wordlist",
+        "examples": [
+            "bautura123",
+            "Bautura123",
+            "Bautura1",
+            "123bautura",
+            "12Bautura"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_rom.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "Simple123_bac",
+        "type": "john",
+        "priority": 32,
+        "path": "nume_bac2018.txt",
+        "rule": "Simple123",
+        "wordsize": 521188,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on Romanian names",
+        "examples": [
+            "gabriela123",
+            "Gabriela123",
+            "Gabriela1",
+            "123gabriela",
+            "12Gabriela"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "Simple123_eng",
+        "type": "john",
+        "priority": 34,
+        "path": "dic_lc_eng.txt",
+        "rule": "Simple123",
+        "wordsize": 999964,
+        "languages": [
+            "english"
+        ],
+        "desc": "Number (1, 12, 21, 123, 321) appending, prepending and capitalization on English words",
+        "examples": [
+            "something123",
+            "Something123",
+            "Something1",
+            "123something",
+            "12Something"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_eng.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "hibpv4_top10mil",
+        "type": "wordlist",
+        "priority": 38,
+        "path": "top_10mil_hibp.txt",
+        "wordsize": 10000000,
+        "languages": [
+            "none"
+        ],
+        "desc": "Top 10 mil passwords in frequency from hibp v4",
+        "examples": [
+            "love4ever",
+            "ilikepie",
+            "candy101",
+            "nietzsche"
+        ],
+        "reqs": [
+            "hashcat",
+            "top_10mil_hibp.txt"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleNums_rom",
+        "type": "john",
+        "priority": 40,
+        "path": "dic_lc_rom.txt",
+        "rule": "SimpleNums",
+        "wordsize": 57496000,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on Romanian words. Does not overlap with Simple123_rom.",
+        "examples": [
+            "bautura64",
+            "Bautura13",
+            "Bautura18",
+            "69bautura",
+            "42Bautura"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_rom.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleNums_bac",
+        "type": "john",
+        "priority": 42,
+        "path": "nume_bac2018.txt",
+        "rule": "SimpleNums",
+        "wordsize": 10567244,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on Romanian names. Does not overlap with Simple123_bac.",
+        "examples": [
+            "gabriela64",
+            "Gabriela13",
+            "Gabriela18",
+            "69gabriela",
+            "42Gabriela"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleNums_eng",
+        "type": "john",
+        "priority": 44,
+        "path": "dic_lc_eng.txt",
+        "rule": "SimpleNums",
+        "wordsize": 20527108,
+        "languages": [
+            "english"
+        ],
+        "desc": "Number ([0-9], [0-9][0-9]) appending, prepending and capitalization on English words. Does not overlap with Simple123_eng.",
+        "examples": [
+            "something64",
+            "Something13",
+            "Something18",
+            "69something",
+            "42Something"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_eng.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "close_dates_sep",
+        "type": "generated",
+        "priority": 50,
+        "path": "date_generator.py",
+        "command": " 1900 2100 -./\\:_ yes",
+        "wordsize": 1862328,
+        "languages": [
+            "none"
+        ],
+        "desc": "All dates between years 1900-2100 using formats (DDsMMsYYYY, MMsDDsYYYY, YYYYsMMsDD, DDsMMsYY, MMsDDsYY, YYsMMsDD) s='-./\\:_'",
+        "examples": [
+            "17-10-90",
+            "05/31/2005",
+            "10-12-1901",
+            "2099:12:12"
+        ],
+        "reqs": [
+            "hashcat",
+            "date_generator.py"
+        ],
+        "link": ""
+    },
+    {
+        "name": "Jumbo_bac",
+        "type": "john",
+        "priority": 55,
+        "path": "nume_comune_bac2018.txt",
+        "rule": "Jumbo",
+        "wordsize": 13795144,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "John the ripper Jumbo rules applied on more popular romanian names",
+        "examples": [],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_comune_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": "/dict?dict=nume_comune_bac2018.txt"
+    },
+    {
+        "name": "Jumbo_eng",
+        "type": "john",
+        "priority": 57,
+        "path": "top_2500_engl.txt",
+        "rule": "Jumbo",
+        "wordsize": 13810205,
+        "languages": [
+            "english"
+        ],
+        "desc": "John the ripper Jumbo rules applied on top 2500 English words (at least 4 letters)",
+        "examples": [],
+        "reqs": [
+            "hashcat",
+            "john",
+            "top_2500_engl.txt",
+            "john-local.conf"
+        ],
+        "link": "/dict?dict=top_2500_engl.txt"
+    },
+    {
+        "name": "RugeoSamona",
+        "type": "john",
+        "priority": 58,
+        "path": "nume_bac2018.txt",
+        "rule": "RugeoSamona",
+        "wordsize": 28707702,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Custom rules that involve mostly blowjobs",
+        "examples": [
+            "PuieMonta",
+            "SugeoRamona",
+            "MuieAndrei",
+            "muieana1"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "historic_dates_sep",
+        "type": "generated",
+        "priority": 60,
+        "path": "date_generator.py",
+        "command": " 0 1900 -./\\:_",
+        "wordsize": 12300600,
+        "languages": [
+            "none"
+        ],
+        "desc": "All dates between years 0-1900 using formats (DDsMMsYYYY, MMsDDsYYYY, YYYYsMMsDD) s='-./\\:_'",
+        "examples": [
+            "17-10-1500",
+            "05/31/1100",
+            "10-12-0020",
+            "1800:12:12"
+        ],
+        "reqs": [
+            "hashcat",
+            "date_generator.py"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleSymbol_rom",
+        "type": "john",
+        "priority": 70,
+        "path": "dic_lc_rom.txt",
+        "rule": "SimpleSymbol",
+        "wordsize": 7049216,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Symbol appending, prepending and capitalization on Romanian words",
+        "examples": [
+            "bautura*",
+            "Bautura(",
+            "&bautura",
+            ":Bautura"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_rom.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleSymbol_bac",
+        "type": "john",
+        "priority": 72,
+        "path": "nume_bac2018.txt",
+        "rule": "SimpleSymbol",
+        "wordsize": 2280576,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Symbol appending, prepending and capitalization on Romanian names",
+        "examples": [
+            "gabriela*",
+            "Gabriela,",
+            "+gabriela",
+            "+Gabriela"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleSymbol_eng",
+        "type": "john",
+        "priority": 74,
+        "path": "dic_lc_eng.txt",
+        "rule": "SimpleSymbol",
+        "wordsize": 4889472,
+        "languages": [
+            "english"
+        ],
+        "desc": "Symbol appending, prepending and capitalization on English words",
+        "examples": [
+            "something*",
+            "Something*",
+            "Something-",
+            ".Something"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_eng.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleYears_rom",
+        "type": "john",
+        "priority": 80,
+        "path": "dic_lc_rom.txt",
+        "rule": "SimpleYears",
+        "wordsize": 57496000,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on Romanian words",
+        "examples": [
+            "bautura1993",
+            "Bautura1943",
+            "2001bautura",
+            "2099Bautura"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_rom.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleYears_bac",
+        "type": "john",
+        "priority": 82,
+        "path": "nume_bac2018.txt",
+        "rule": "SimpleYears",
+        "wordsize": 26488000,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on Romanian names",
+        "examples": [
+            "gabriela1947",
+            "Gabriela1919",
+            "Gabriela2050",
+            "2019Gabriela"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleYears_eng",
+        "type": "john",
+        "priority": 84,
+        "path": "dic_lc_eng.txt",
+        "rule": "SimpleYears",
+        "wordsize": 49391200,
+        "languages": [
+            "english"
+        ],
+        "desc": "Recent years (19[0-9][0-9], 20[0-9][0-9]) appending, prepending and capitalization on English words",
+        "examples": [
+            "something2001",
+            "Something2006",
+            "Something1992",
+            "2011something"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_eng.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "future_dates_sep",
+        "type": "generated",
+        "priority": 90,
+        "path": "date_generator.py",
+        "command": " 2100 10000 -./\\:_",
+        "wordsize": 51144600,
+        "languages": [
+            "none"
+        ],
+        "desc": "All dates between years 2100-9999 using formats (DDsMMsYYYY, MMsDDsYYYY, YYYYsMMsDD) s='-./\\:_'",
+        "examples": [
+            "17-10-3001",
+            "05/31/6050",
+            "10-12-3030",
+            "4242:12:12"
+        ],
+        "reqs": [
+            "hashcat",
+            "date_generator.py"
+        ],
+        "link": ""
+    },
+    {
+        "name": "EightDigits",
+        "type": "mask_hashcat",
+        "priority": 100,
+        "path": "",
+        "mask_hashcat": "?d?d?d?d?d?d?d?d",
+        "wordsize": 100000000,
+        "languages": [
+            "none"
+        ],
+        "desc": "All eight digits numbers",
+        "examples": [
+            "17592044",
+            "62540891",
+            "77554310",
+            "12385977"
+        ],
+        "reqs": [
+            "hashcat"
+        ],
+        "link": ""
+    },
+    {
+        "name": "RoPhone",
+        "type": "mask_hashcat",
+        "priority": 102,
+        "path": "",
+        "mask_hashcat": "07?d?d?d?d?d?d?d?d",
+        "wordsize": 100000000,
+        "languages": [
+            "none"
+        ],
+        "desc": "All 10 digits phone numbers starting with '07'",
+        "examples": [
+            "0745192433",
+            "0723182955",
+            "0744103020",
+            "0712385977"
+        ],
+        "reqs": [
+            "hashcat"
+        ],
+        "link": ""
+    },
+    {
+        "name": "ThreeYears",
+        "type": "filemask_hashcat",
+        "priority": 108,
+        "path": "three_years.hcmask",
+        "wordsize": 8000000,
+        "languages": [
+            "none"
+        ],
+        "desc": "Concatenate three times the years from 1900 to 2099 without separators",
+        "examples": [
+            "197519751975",
+            "200320061990",
+            "209919002099",
+            "200220022002"
+        ],
+        "reqs": [
+            "hashcat",
+            "three_years.hcmask"
+        ],
+        "link": ""
+    },
+    {
+        "name": "hibpv4_10-100mil",
+        "type": "wordlist",
+        "priority": 110,
+        "path": "top_10-100mil_hibp.txt",
+        "wordsize": 90000000,
+        "languages": [
+            "none"
+        ],
+        "desc": "Passwords from 10 to 100 mil in frequency from hibp v4",
+        "examples": [
+            "horcrux9",
+            "hehemanh",
+            "dischead",
+            "zvezdec123"
+        ],
+        "reqs": [
+            "hashcat",
+            "top_10-100mil_hibp.txt"
+        ],
+        "link": ""
+    },
+    {
+        "name": "hibpv4_rest",
+        "type": "wordlist",
+        "priority": 115,
+        "path": "rest_hibp.txt",
+        "wordsize": 335309807,
+        "languages": [
+            "none"
+        ],
+        "desc": "The rest of the passwords from hibp v4",
+        "examples": [
+            "zucadume",
+            "z1280136311",
+            "shania1357",
+            "minhuck16"
+        ],
+        "reqs": [
+            "hashcat",
+            "rest_hibp.txt"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleSymbolNum_rom",
+        "type": "john",
+        "priority": 120,
+        "path": "dic_lc_rom.txt",
+        "rule": "SimpleSymbolNum",
+        "wordsize": 163873280,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Symbol and number (both orders) appending, prepending and capitalization on Romanian words",
+        "examples": [
+            "bautura6*",
+            "Bautura(6",
+            "Bautura3)",
+            "1&bautura",
+            ":3Bautura"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_rom.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleSymbolNum_bac",
+        "type": "john",
+        "priority": 122,
+        "path": "nume_bac2018.txt",
+        "rule": "SimpleSymbolNum",
+        "wordsize": 64821760,
+        "languages": [
+            "romanian"
+        ],
+        "desc": "Symbol and number (both orders) appending, prepending and capitalization on Romanian names",
+        "examples": [
+            "gabriela*1",
+            "Gabriela/5",
+            "+5gabriela",
+            "9+Gabriela"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "nume_bac2018.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "SimpleSymbolNum_eng",
+        "type": "john",
+        "priority": 124,
+        "path": "dic_lc_eng.txt",
+        "rule": "SimpleSymbolNum",
+        "wordsize": 125073920,
+        "languages": [
+            "english"
+        ],
+        "desc": "Symbol and number (both orders) appending, prepending and capitalization on English words",
+        "examples": [
+            "something1*",
+            "Something(8",
+            "7*something",
+            "<3Something"
+        ],
+        "reqs": [
+            "hashcat",
+            "john",
+            "dic_lc_eng.txt",
+            "john-local.conf"
+        ],
+        "link": ""
+    },
+    {
+        "name": "WikiSpanish",
+        "type": "wordlist",
+        "priority": 104,
+        "path": "eswiki.txt",
+        "wordsize": 36419672,
+        "languages": [
+            "spanish"
+        ],
+        "desc": "Spanish words from wikipedia dumps (english alphabet, without special characters)",
+        "examples": [
+            "gracias",
+            "hablo",
+            "manana"
+        ],
+        "reqs": [
+            "hashcat",
+            "eswiki.txt"
+        ],
+        "link": "/dict?dict=eswiki.txt"
+    },
+    {
+        "name": "WikiFrench",
+        "type": "wordlist",
+        "priority": 105,
+        "path": "frwiki.txt",
+        "languages": [
+            "french"
+        ],
+        "wordsize": 41102851,
+        "desc": "French words from wikipedia dumps (english alphabet, without special characters)",
+        "examples": [
+            "bonjour",
+            "garcon",
+            "chouette"
+        ],
+        "reqs": [
+            "hashcat",
+            "frwiki.txt"
+        ],
+        "link": "/dict?dict=frwiki.txt"
+    },
+    {
+        "name": "WikiGerman",
+        "type": "wordlist",
+        "priority": 106,
+        "path": "dewiki.txt",
+        "languages": [
+            "deutsch"
+        ],
+        "wordsize": 139933096,
+        "desc": "German words from wikipedia dumps (english alphabet, without special characters)",
+        "examples": [
+            "lacheln",
+            "Deutscher",
+            "Gluck"
+        ],
+        "reqs": [
+            "hashcat",
+            "dewiki.txt"
+        ],
+        "link": "/dict?dict=dewiki.txt"
+    },
+    {
+        "name": "WikiSpanishTitles",
+        "type": "wordlist",
+        "priority": 107,
+        "path": "titles-eswiki.txt",
+        "languages": [
+            "spanish"
+        ],
+        "wordsize": 36419672,
+        "desc": "Spanish words from wikipedia dumps (english alphabet, without special characters)",
+        "examples": [
+            "gracias",
+            "hablo",
+            "manana"
+        ],
+        "reqs": [
+            "hashcat",
+            "titles-eswiki.txt"
+        ],
+        "link": "/dict?dict=titles-eswiki.txt"
+    },
+    {
+        "name": "WikiFrenchTitles",
+        "type": "wordlist",
+        "priority": 109,
+        "path": "titles-frwiki.txt",
+        "languages": [
+            "french"
+        ],
+        "wordsize": 41102851,
+        "desc": "French words from wikipedia dumps (english alphabet, without special characters)",
+        "examples": [
+            "bonjour",
+            "garcon",
+            "chouette"
+        ],
+        "reqs": [
+            "hashcat",
+            "titles-frwiki.txt"
+        ],
+        "link": "/dict?dict=titles-frwiki.txt"
+    },
+    {
+        "name": "WikiGermanTitles",
+        "type": "wordlist",
+        "priority": 200,
+        "path": "titles-dewiki.txt",
+        "wordsize": 139933096,
+        "languages": [
+            "romanian",
+            "deutsch",
+            "spanish"
+        ],
+        "desc": "German words from wikipedia dumps (english alphabet, without special characters)",
+        "examples": [
+            "lacheln",
+            "Deutscher",
+            "Gluck"
+        ],
+        "reqs": [
+            "hashcat",
+            "titles-dewiki.txt"
+        ],
+        "link": "/dict?dict=titles-dewiki.txt"
+    }
 ]

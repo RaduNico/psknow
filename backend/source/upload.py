@@ -314,7 +314,6 @@ def check_handshake(file_path, filename, wifi_entry):
 @not_admin
 def upload_file():
     if request.method == 'GET':
-
         return render_template('upload.html')
 
     # Check if database is not down
@@ -334,13 +333,17 @@ def upload_file():
     suggested_passwords = request.form.getlist('tags')
 
     # Convert list of coordinates to a dict of coordinates
-    coord_lst = re.split("[, :]+", coordinates[0])
-    coord_dct = {coord_lst[i]: coord_lst[i + 1] for i in range(0, len(coord_lst), 2)}
+    coord = [0.0, 0.0]
+    location = ""
+    address = ""
 
-    locator = Nominatim(user_agent="myGeocoder")
-    coord = coord_dct["Lat"] + ", " + coord_dct["Lon"]
-    location = locator.reverse(coord)
-    address = location.raw['address']
+    if coordinates != ['']:
+        coord_lst = re.split("[, :]+", coordinates[0])
+        coord_dct = {coord_lst[i]: coord_lst[i + 1] for i in range(0, len(coord_lst), 2)}
+        locator = Nominatim(user_agent="myGeocoder")
+        coord = [coord_dct["Lat"], coord_dct["Lon"]]
+        location = locator.reverse(coord)
+        address = location.raw['address']
 
     # Check for empty filename
     if len(files) == 0:
@@ -362,10 +365,16 @@ def upload_file():
 
         new_entry = deepcopy(Configuration.default_wifi)
 
-        new_entry["location"]["address"] = location.address
-        new_entry["location"]["city"] = address.get('city', '')
-        new_entry["location"]["keyword"] = suggested_passwords
-        new_entry["location"]["coordinates"] = coordinates
+        if suggested_passwords != ['']:
+            new_entry["location"]["keyword"] = suggested_passwords
+
+        if location != "":
+            new_entry["location"]["address"] = location.address
+
+        if address != "":
+            new_entry["location"]["city"] = address.get('city', '')
+
+        new_entry["location"]["coordinates"] = coord
         new_entry["date_added"] = datetime.datetime.now()
         new_entry["users"] = [current_user.get_id()]
         new_entry["priority"] = 0

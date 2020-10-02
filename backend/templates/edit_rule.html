@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv='cache-control' content='no-cache'>
+    <meta http-equiv='expires' content='0'>
+    <meta http-equiv='pragma' content='no-cache'>
+  <title>PSKnow</title>
+    <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.default.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='rule_form.css') }}">
+    <script src="http://code.jquery.com/jquery-1.10.2.js" type="text/javascript"></script>
+    <script src="../static/rule_add.js"></script>
+    <script src="../static/selectize.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<body>
+  <ul class=navbar>
+    <li><a href='/'>Home</a></li>
+    <li><a href='/admin/'>Admin</a></li>
+    <li><a href='/rules/'>Rules</a></li>
+    <li style="float:right"><a href='/logout/'>Logout</a></li>
+  </ul>
+
+  <br>
+
+  <form action="/edit_rule/{{rule['name']}}" method="post" id="rule-form" enctype="multipart/form-data">
+    <h2>Edit the rule</h2>
+    <label for="name"><b>Name</b></label><br>
+    <input type="text" id="name" name="name" placeholder="Enter rule name" value="{{rule['name']}}" onchange="setName()" required>
+    <br><br>
+
+    <label><b>Type</b></label><br>
+    <select id="type" name="type">
+      <option value="6" hidden>Select rule type</option>
+      <option id="scrambler" value="scrambler">scrambler</option>
+      <option id="wordlist" value="wordlist">wordlist</option>
+      <option id="john" value="john">john</option>
+      <option id="generated" value="generated">generated</option>
+      <option id="mask_hashcat" value="mask_hashcat">mask_hashcat</option>
+      <option id="filemask_hashat" value="filemask_hashcat">filemask_hashcat</option>
+    </select><br><br>
+
+    <label for="priority"><b>Priority</b></label><br>
+    <input type="number" id="priority" name="priority" onchange="setPriority()" value="{{rule['priority']}}"
+           placeholder="Enter rule priority" required><br><br>
+
+    <label for="description"><b>Description</b></label><br>
+    <input type="text" id="description" name="description" value="{{rule['desc']}}" placeholder="Enter rule description" ><br><br>
+
+    <label for="examples"><b>Examples</b></label><br>
+    <input type="text" id="examples" name="examples" placeholder="Enter examples"><br>
+
+    <label><b>Languages</b></label><br>
+    <select placeholder="Select languages" id="languages" name="languages" multiple>
+      <option class="language-option" id="english" value="english">English</option>
+      <option class="language-option" id="romanian" value="romanian">Română</option>
+      <option class="language-option" id="french" value="french">Français</option>
+      <option class="language-option" id="deutsch" value="deutsch">Deutsch</option>
+      <option class="language-option" id="spanish" value="spanish">Español</option>
+    </select><br>
+
+    <label for="link"><b>Link</b></label><br>
+    <input type="text" id="link" name="link" value="{{rule['link']}}" placeholder="Enter link"><br><br>
+
+    <input type="hidden" id="reqs" name="reqs" value="{{rule['reqs']}}">
+    <input type="hidden" id="path" name="path" value="{{rule['path']}}">
+    <input type="hidden" id="wordsize" name="wordsize" value="{{rule['wordsize']}}">
+
+    <div id="dynamic"></div>
+    <p>
+      <input type="submit"/>
+      <a href="../rules">
+        <button type="button" id="cancel">Cancel</button><br><br><br>
+      </a>
+    </p>
+  </form>
+
+
+  <script type=text/javascript>
+    let element = "";
+    {% for language in rule["languages"] %}
+      element = "{{language}}";
+      if (element === 'none') {
+        for (let i = 0; i < document.getElementsByClassName("language-option").length; ++i) {
+          document.getElementsByClassName("language-option")[i].setAttribute('selected', true);
+        }
+      } else {
+        document.getElementById(element).setAttribute('selected', true);
+      }
+    {% endfor %}
+
+    let str_examples = "";
+    {% for example in rule["examples"] %}
+      str_examples = str_examples + "{{example}}" + ",";
+    {% endfor %}
+    str_examples = str_examples.substring(0, str_examples.length - 1);
+    document.getElementById("examples").setAttribute('value', str_examples);
+  </script>
+
+  <script type="text/javascript">
+    function setName() {
+      let name = document.getElementById("name").value;
+      {% for nm in names %}
+        if (name === "{{nm}}") {
+          document.getElementById("name").value = "";
+          alert("Duplicate name: " + name + ". Please choose another name for your rule.");
+        }
+      {% endfor %}
+    }
+
+    function setPriority() {
+      let priority = document.getElementById("priority").value;
+
+      {% for prio in priorities %}
+         if (priority == {{prio}}) {
+            document.getElementById("priority").value = "";
+            alert("Duplicate priority: " + priority + ". Please choose another priority for your rule.");
+         }
+      {% endfor %}
+
+    if (isNaN(Number(priority))) {
+        document.getElementById("priority").value = "";
+        alert("Not a number.")
+      }
+    }
+
+    document.getElementById("{{rule['type']}}").setAttribute('selected', true);
+  </script>
+
+  <script type=text/javascript>
+    $(document).ready(function() {
+      $("#type").trigger("change");
+      if ("{{rule['type']}}" == "john") {
+        document.getElementById("rule").setAttribute('value', "{{rule['rule']}}");
+      }
+
+      if ("{{rule['type']}}" == "generated") {
+        document.getElementById("command").setAttribute('value', "{{rule['command']}}");
+        document.getElementById("path").setAttribute('value', "{{rule['path']}}");
+        document.getElementById("wordsize").setAttribute('value', "{{rule['wordsize']}}");
+      }
+
+      if ("{{rule['type']}}" == "mask_hashcat") {
+        document.getElementById("pattern").setAttribute('value', "{{rule['mask_hashcat']}}");
+        document.getElementById("wordsize").setAttribute('value', "{{rule['wordsize']}}");
+      }
+    });
+  </script>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for type,message in messages %}
+        {% if type == 'success' %}
+          <div style='color:green'>
+            {{ message }}
+          </div>
+        {% else%}
+          <div style='color:red'>
+            {{ message }}
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <br>
+    {% endif %}
+  {% endwith %}
+
+</body>
+</html>
