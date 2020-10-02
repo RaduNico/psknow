@@ -20,14 +20,19 @@ class Scheduler:
                       " var crt = {};" \
                       " for (var name in attributes) { " \
                       "     var valid_rule = false;" \
-                      "     if (attributes[name][1] === 'none') {"  \
-                      "         valid_rule = true;  "\
-                      "         continue;" \
-                      "     }" \
-                      "     for (var language in this['languages']) { " \
-                      "         if (attributes[name][1] === this['languages'][language]) { " \
+                      "     for (var rule_language in attributes[name][1]) {" \
+                      "         if (attributes[name][1][rule_language] === 'none') { " \
                       "             valid_rule = true;" \
-                      "             continue;" \
+                      "             break;" \
+                      "         }" \
+                      "         for (var hs_language in this['languages']) { " \
+                      "             if (attributes[name][1][rule_language] === this['languages'][hs_language]) { " \
+                      "                 valid_rule = true;" \
+                      "                 break;" \
+                      "             }" \
+                      "         }" \
+                      "         if (valid_rule === true) {" \
+                      "             break;" \
                       "         }" \
                       "     }" \
                       "     if (valid_rule === false) {" \
@@ -243,7 +248,6 @@ class Scheduler:
                 continue
 
             result[rule_name] = [rule["priority"], rule["languages"]]
-
         return result
 
     @staticmethod
