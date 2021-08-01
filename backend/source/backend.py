@@ -1,19 +1,15 @@
-import random
-import string
-
 from werkzeug.exceptions import abort
 from .config import Configuration
 from .user import User, enc_bcrypt
 from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
 
-from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify, current_app
+from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify  # , current_app
 from flask_login import login_user, logout_user, login_required, current_user
+# from flask_mail import Mail, Message
 
 from .database_helper import update_hs_id, lookup_by_id
 
 from .upload import retire_handshake
-
-from flask_mail import Mail, Message
 
 blob_api = Blueprint('blob_api', __name__)
 
@@ -265,12 +261,12 @@ def login():
             flash("No password introduced!")
             return redirect(request.url)
 
-        if not User.check_credentials(username, password):
-            if not User.check_recovery_credentials(username, password):
-                Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
-                                             (username, password))
-                flash("Incorrect username/password!")
-                return redirect(request.url)
+        # if not User.check_credentials(username, password):
+        #     if not User.check_recovery_credentials(username, password):
+        #         Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
+        #                                      (username, password))
+        #         flash("Incorrect username/password!")
+        #         return redirect(request.url)
 
         login_user(User(username))
 
@@ -377,37 +373,37 @@ def profile():
     return render_template('profile.html', email=display_email)
 
 
-@blob_api.route('/reset_password/', methods=['GET', 'POST'])
-def reset_password():
-    if request.method == 'POST':
-        # send email when the form is submitted
-        email = request.form.get("email", None)
-        if Configuration.users.find_one({"email": email}) is None:
-            flash("Incorrect email")
-            return redirect(request.url)
-
-        current_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-        current_app.config['MAIL_PORT'] = 465
-        current_app.config['MAIL_USERNAME'] = ''
-        current_app.config['MAIL_PASSWORD'] = ''
-        current_app.config['MAIL_USE_TLS'] = False
-        current_app.config['MAIL_USE_SSL'] = True
-        mail = Mail(current_app)
-        msg = Message(
-            "Password reset",
-            sender=("PSKnow", "psknow.pandora@gmail.com"),
-            recipients=[email]
-        )
-
-        random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase +
-                                                             string.digits) for _ in range(10))
-        msg.body = "Please use the code " + random_string + " to reset your password. "
-        msg.body = msg.body + "If you did not request your password to be reset, ignore this message."
-        mail.send(msg)
-        Configuration.users.update({"email": email}, {"$set": {"recovery_password": enc_bcrypt(random_string)}})
-        flash("Successfully sent! Please check your email account for a message with a confirmation code "
-              "you can use to reset your password.", 'success')
-        return redirect(url_for("blob_api.login"))
-
-    # show the form, it wasn't submitted
-    return render_template('reset_password.html')
+# @blob_api.route('/reset_password/', methods=['GET', 'POST'])
+# def reset_password():
+#     if request.method == 'POST':
+#         # send email when the form is submitted
+#         email = request.form.get("email", None)
+#         if Configuration.users.find_one({"email": email}) is None:
+#             flash("Incorrect email")
+#             return redirect(request.url)
+#
+#         current_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+#         current_app.config['MAIL_PORT'] = 465
+#         current_app.config['MAIL_USERNAME'] = ''
+#         current_app.config['MAIL_PASSWORD'] = ''
+#         current_app.config['MAIL_USE_TLS'] = False
+#         current_app.config['MAIL_USE_SSL'] = True
+#         mail = Mail(current_app)
+#         msg = Message(
+#             "Password reset",
+#             sender=("PSKnow", "psknow.pandora@gmail.com"),
+#             recipients=[email]
+#         )
+#
+#         random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase +
+#                                                              string.digits) for _ in range(10))
+#         msg.body = "Please use the code " + random_string + " to reset your password. "
+#         msg.body = msg.body + "If you did not request your password to be reset, ignore this message."
+#         mail.send(msg)
+#         Configuration.users.update({"email": email}, {"$set": {"recovery_password": enc_bcrypt(random_string)}})
+#         flash("Successfully sent! Please check your email account for a message with a confirmation code "
+#               "you can use to reset your password.", 'success')
+#         return redirect(url_for("blob_api.login"))
+#
+#     # show the form, it wasn't submitted
+#     return render_template('reset_password.html')
