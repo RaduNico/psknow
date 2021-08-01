@@ -21,7 +21,7 @@ def preprocess_password(password):
     return base64.b64encode(hashlib.sha256(password.encode('ascii')).digest())
 
 
-def enc_bcrypt(password):
+def hash_bcrypt(password):
     return base64.b64encode(bcrypt.hashpw(preprocess_password(password), bcrypt.gensalt(14))).decode('ascii')
 
 
@@ -66,7 +66,7 @@ class User(UserMixin):
         if len(user) == 0:
             new_user = deepcopy(user_template)
             new_user["username"] = username
-            new_user["password"] = enc_bcrypt(password)
+            new_user["password"] = hash_bcrypt(password)
 
             try:
                 obj = Configuration.users.insert_one(new_user)

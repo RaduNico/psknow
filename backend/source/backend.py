@@ -1,6 +1,6 @@
 from werkzeug.exceptions import abort
 from .config import Configuration
-from .user import User, enc_bcrypt
+from .user import User, hash_bcrypt
 from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
 
 from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify  # , current_app
@@ -368,7 +368,7 @@ def profile():
                 return redirect(request.url)
 
             Configuration.users.update({"username": current_user.get_id()},
-                                       {"$set": {"password": enc_bcrypt(password)}})
+                                       {"$set": {"password": hash_bcrypt(password)}})
 
     return render_template('profile.html', email=display_email)
 
@@ -400,7 +400,7 @@ def profile():
 #         msg.body = "Please use the code " + random_string + " to reset your password. "
 #         msg.body = msg.body + "If you did not request your password to be reset, ignore this message."
 #         mail.send(msg)
-#         Configuration.users.update({"email": email}, {"$set": {"recovery_password": enc_bcrypt(random_string)}})
+#         Configuration.users.update({"email": email}, {"$set": {"recovery_password": hash_bcrypt(random_string)}})
 #         flash("Successfully sent! Please check your email account for a message with a confirmation code "
 #               "you can use to reset your password.", 'success')
 #         return redirect(url_for("blob_api.login"))
