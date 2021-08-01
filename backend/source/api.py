@@ -28,7 +28,7 @@ key_template = {
 api_api = Blueprint('api_api', __name__)
 
 
-# Decorator that determines if a user is allowd to use the API
+# Decorator that determines if a user is allowed to use the API
 def allowed_api(f):
     @wraps(f)
     def allowed_api_fct(*args, **kwargs):
@@ -70,9 +70,9 @@ def require_key(f):
             return jsonify({"success": False, "reason": "Invalid API key!"})
 
         try:
-            user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except
+            user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})
         except Exception as e:
-            Configuration.logger.error("Error occured while retrieving username from database: %s" % e)
+            Configuration.logger.error("Error occurred while retrieving username from database: %s" % e)
             return None, "Internal server error 101"
 
         if user_entry is None:
@@ -421,7 +421,14 @@ def sendeta_v1(**kwargs):
     return jsonify({"success": True})
 
 
-def is_password(password, db_entry):
+def is_wifi_password(password, db_entry):
+    """
+        Helper function which returns if the value in the password entry is the correct one of the db_entry
+    :param password: A potential password for a handshake/PMKID
+    :param db_entry: A wifi database entry. Contains all information about a single wifi in the database.
+    :return: Pair of (bool, str). The boolean parameter returns whether the password is correct for a database entry
+        and the str returns a reason, if it is not a valid password.
+    """
     _, password_temp_file = tempfile.mkstemp(prefix="psknow_backend")
     _, hcx_temp_file = tempfile.mkstemp(prefix="psknow_backend")
 
@@ -429,7 +436,7 @@ def is_password(password, db_entry):
         fd.write(password)
 
     try:
-        Configuration.logger.info("%s" % db_entry)
+        Configuration.logger.info("Database entry, 'is_password' function, api.py %s" % db_entry)
         capture = Scheduler.get_22000_data(db_entry)
         if capture.startswith("WPA"):
             capture = capture[7:-3]
@@ -500,7 +507,7 @@ def sendresult_v1(**kwargs):
         return jsonify({"success": False, "reason": "Invalid password length."})
 
     wifi_entry = kwargs["job"]
-    is_pass, error = is_password(password, wifi_entry)
+    is_pass, error = is_wifi_password(password, wifi_entry)
     if not is_pass:
         return jsonify({"success": False, "reason": error})
 
