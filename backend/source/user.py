@@ -13,8 +13,6 @@ user_template = {
     "password": "",
     "allow_api": False,
     "api_keys": [],
-    "first_name": "Enter first name",
-    "last_name": "Enter last name",
     "email": "Enter email"
 }
 
