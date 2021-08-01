@@ -123,12 +123,13 @@ def home():
             else:
                 user_handshakes[crt_user]["cracked"].append(get_cracked_tuple(file_structure))
 
-        users_list = list(Configuration.users.find())
-        no_users = len(users_list)
-        for i in range(no_users):
-            crt_user = users_list[i]["username"]
-            if crt_user not in user_handshakes and crt_user != Configuration.admin_account:
-                user_handshakes[crt_user] = {"cracked": [], "uncracked": []}
+        # Add users to the list which do not have any uploaded handshakes
+        users = Configuration.users.find({}, {'_id': 0, 'username': 1})
+
+        for user in users:
+            username = user["username"]
+            if username not in user_handshakes and username != Configuration.admin_account:
+                user_handshakes[username] = {"cracked": [], "uncracked": []}
 
         # Sort based on crack date using raw date field
         for entry in user_handshakes.values():
@@ -171,12 +172,15 @@ def home():
 @blob_api.route('/change_permissions/<name>')
 @ajax_requires_admin
 def change_permissions(name):
-    change = False
+    change = True
+
+    # TODO add try catch
+    # TODO user might not exist
     if Configuration.users.find_one({'username': name})['allow_api']:
-        Configuration.users.update_one({'username': name}, {"$set": {'allow_api': False}})
-    else:
-        Configuration.users.update_one({'username': name}, {"$set": {'allow_api': True}})
-        change = True
+        change = False
+
+    # TODO add try catch
+    Configuration.users.update_one({'username': name}, {"$set": {'allow_api': change}})
 
     return jsonify({"success": True, "data": change})
 
