@@ -33,6 +33,7 @@
 
     <link rel="stylesheet" type="text/css" href="/css/table.css">
     <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 </head>
 <body>
 <ul class=navbar>
@@ -76,22 +77,19 @@
                            {% endif %}
                     />
                     <label for={{user_hs_pair[0]}}_btn> Grant API access?</label>
-
-                    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
                     <script type=text/javascript>
-                            $(function() {
-                              $('#{{user_hs_pair[0]}}_btn').bind('click', function() {
+                        $(function() {
+                            $('#{{user_hs_pair[0]}}_btn').bind('click', function() {
                                 $.getJSON('/change_permissions/{{user_hs_pair[0]}}',
                                     function(response) {
-                                       if (response.data == true) {
+                                        if (response.data == true)
                                             document.getElementById("{{user_hs_pair[0]}}_btn").style.background="green";
-                                       } else {
+                                        else
                                             document.getElementById("{{user_hs_pair[0]}}_btn").style.background="red";
-                                       }
                                 });
-                                return false;
-                              });
+                            return false;
                             });
+                        });
                     </script>
                 </h4>
             </form>
