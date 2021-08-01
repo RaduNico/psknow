@@ -172,7 +172,7 @@ class Scheduler:
                                        (crt_capture["handshake_type"], crt_capture))
             return None
 
-        f, temp_filename = mkstemp(prefix="psknow_backend")
+        _, temp_filename = mkstemp(prefix="psknow_backend")
 
         cmd = "hcxpcapngtool -o %s %s" % (temp_filename, crt_capture["path"])
         stdout = Process(cmd, crit=True).stdout()
