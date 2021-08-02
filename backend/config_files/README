@@ -1,3 +1,5 @@
 # To activate virtualenv 'source backendenv/bin/activate'
 # To deactivate virtualenv 'deactivate'
 # To manually run gunicorn 'gunicorn3 --bind 127.0.0.1:9645 wsgi --access-logfile logs/access.log --error-logfile logs/errors.log'
+
+Installing opencl for Intel processors https://community.parrotsec.org/t/install-opencl-driver-for-intel-card/5778.

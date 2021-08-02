@@ -1,5 +1,6 @@
 import os
 import datetime
+import tempfile
 
 from .process import Process
 from .database_helper import generic_find, update_hs_id
@@ -117,95 +118,115 @@ class Scheduler:
         return result, error
 
     @staticmethod
-    def _get_pmkid_from16800_mac(file, mac_addr):
-        """ return PMKID from a .16800 file that matches the given MAC """
-        with open(file) as fd:
-            for line in fd:
-                if line.endswith("\n"):
-                    line = line[:-1]
-                matchobj = Configuration.pmkid_16800_regex.match(line)
-                if matchobj is None:
-                    continue
-                match_mac = ":".join(a + b for a, b in zip(matchobj.group(1)[::2], matchobj.group(1)[1::2]))
-                if mac_addr == match_mac:
-                    return line
-            return None
+    def _filter_22000hash_filter_mac(hashes, mac_addr):
+        for line in hashes:
+            if line.endswith("\n"):
+                line = line[:-1]
+
+            # Match based on the 22000 format regex
+            matchobj = Configuration.regex_22000.match(line)
+            if matchobj is None:
+                continue
+
+            # Group 2 is the position where the AP MAC is stored
+            match_mac = ":".join(a + b for a, b in zip(matchobj.group(2)[::2], matchobj.group(2)[1::2]))
+            if mac_addr == match_mac:
+                return line
+        return None
 
     @staticmethod
-    def _get_capture_from22000_mac(file, mac_addr):
-        """ return PMKID/handshake from a .22000 file that matches the given MAC """
-        with open(file) as fd:
-            for line in fd:
-                if line.endswith("\n"):
-                    line = line[:-1]
-                matchobj = Configuration.regex_pmkid.match(line)
-                if matchobj is None:
-                    matchobj = Configuration.regex_handshake.match(line)
-                    if matchobj is None:
-                        continue
-                match_mac = ":".join(a + b for a, b in zip(matchobj.group(1)[::2], matchobj.group(1)[1::2]))
-                if mac_addr == match_mac:
-                    return line
-            return None
+    def _get_22000hash_from_16800_filter_mac(file, mac_addr):
+        """ return 22000 hash from a .16800 file that matches the given MAC """
+
+        _, temp_22000_filename = mkstemp(prefix="psknow_backend")
+
+        try:
+            cmd = "hcxmactool --pmkidin=%s --pmkideapolout=%s" % (file, temp_22000_filename)
+            process = Process(cmd, crit=True)
+
+            output = process.stdout()
+
+            if "record(s) written to" not in output:
+                return None
+
+            with open(temp_22000_filename) as fd:
+                return Scheduler._filter_22000hash_filter_mac(fd.readlines(), mac_addr)
+        finally:
+            os.unlink(temp_22000_filename)
+
+
+    @staticmethod
+    def _get_22000hash_from_capture_filter_mac(file, mac_addr):
+        """ return 22000 hash from a capture file that matches the given MAC """
+        _, temp_22000_filename = mkstemp(prefix="psknow_backend")
+
+        try:
+            cmd = "hcxpcapngtool -o %s %s" % (temp_22000_filename, file)
+            process = Process(cmd, crit=True)
+
+            output = process.stdout()
+
+            if "record(s) written to" not in output:
+                return None
+
+            with open(temp_22000_filename) as fd:
+                return Scheduler._filter_22000hash_filter_mac(fd.readlines(), mac_addr)
+        finally:
+            os.unlink(temp_22000_filename)
 
     @staticmethod
     def _get_22000_data(crt_capture):
         """
             This function should never be called from outside of this file because
             the parameter it takes does not coincide with the database format.
+            The biggest difference is that in the database information about the handshake is stored inside
+            the attribute "handshake" (such as the SSID and the MAC) whereas the mapreduce stores it at values inside
+            the root capture.
+            e.g.
+                database_entry["handshake"]["SSID"] == mapreduce_entry["SSID"]
+
             :param crt_capture: Capture information as formatted by the mapreduce 'Scheduler.mapper_template'
             :return: 22000 format file for provided parameter
         """
+        # Sort of useless sanity check, other values should not exist
+        if not (crt_capture["handshake_type"] == "PMKID" or crt_capture["handshake_type"] == "WPA"):
+            Configuration.logger.error("Unknown type of attack '%s' in entry '%s'" %
+                                       (crt_capture["handshake_type"], crt_capture))
+            return None
+
         if not os.path.isfile(crt_capture["path"]):
             Configuration.logger.error("File '%s' from id '%s' does not exist." %
                                        (crt_capture['path'], crt_capture["id"]))
             return None
 
         if crt_capture["file_type"] == "16800":
-            return Scheduler._get_pmkid_from16800_mac(crt_capture["path"], crt_capture["mac"])
+            return Scheduler._get_22000hash_from_16800_filter_mac(crt_capture["path"], crt_capture["mac"])
 
         if crt_capture["file_type"] == "22000":
-            return Scheduler._get_capture_from22000_mac(crt_capture["path"], crt_capture["mac"])
+            with open(crt_capture["path"]) as fd:
+                lines = fd.readlines()
+                return Scheduler._filter_22000hash_filter_mac(lines, crt_capture["mac"])
 
-        if not (crt_capture["handshake_type"] == "PMKID" or crt_capture["handshake_type"] == "WPA"):
-            Configuration.logger.error("Unknown type of attack '%s' in entry '%s'" %
-                                       (crt_capture["handshake_type"], crt_capture))
-            return None
-
-        _, temp_filename = mkstemp(prefix="psknow_backend")
-
-        cmd = "hcxpcapngtool -o %s %s" % (temp_filename, crt_capture["path"])
-        stdout = Process(cmd, crit=True).stdout()
-
-        if "written to" not in stdout:
-            os.remove(temp_filename)
-            return None
-
-        capture = Scheduler._get_capture_from22000_mac(temp_filename, crt_capture["mac"])
-        os.remove(temp_filename)
-        return capture
+        return Scheduler._get_22000hash_from_capture_filter_mac(crt_capture["path"], crt_capture["mac"])
 
     @staticmethod
-    def get_22000_data(crt_capture):
+    def generate_22000_from_wifi_db_entry(capture):
         """
-            This is a temporary fix needed until a better result checking
-            method is implemented. This should be removed as soon as possible.
-            Do not use this method.
-        :param crt_capture:
-        :return:
+            This function returns the hash associated with the wifi present in the capture parameter
+        :param capture: A wifi capture entry from the database.
+        :return: False in case no hashes could be written, The hash in case of success
         """
+
         intermediary = dict()
-        intermediary['date_added'] = crt_capture['date_added']
-        intermediary['priority'] = crt_capture['priority']
-        intermediary['id'] = crt_capture['id']
-        intermediary['path'] = crt_capture['path']
-        intermediary['file_type'] = crt_capture['file_type']
-        intermediary['id'] = crt_capture['id']
-        intermediary["mac"] = crt_capture["handshake"]["MAC"]
-        intermediary['ssid'] = crt_capture['handshake']['SSID']
-        intermediary['next_rule'] = ""
-        intermediary['rule_prio'] = -1
-        intermediary["handshake_type"] = crt_capture["handshake"]["handshake_type"]
+        intermediary['date_added'] = capture['date_added']
+        intermediary['priority'] = capture['priority']
+        intermediary['id'] = capture['id']
+        intermediary['path'] = capture['path']
+        intermediary['file_type'] = capture['file_type']
+        intermediary['id'] = capture['id']
+        intermediary["mac"] = capture["handshake"]["MAC"]
+        intermediary['ssid'] = capture['handshake']['SSID']
+        intermediary["handshake_type"] = capture["handshake"]["handshake_type"]
 
         return Scheduler._get_22000_data(intermediary)
 

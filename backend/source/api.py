@@ -277,7 +277,7 @@ def file_ok(filename, apikey):
 
     if filename is None or filename == "" or filename not in Configuration.cap_dict:
         if filename not in Configuration.cap_dict:
-            Configuration.logger.warning("Api key '%s' requested illegal file" % filename)
+            Configuration.logger.warning("Api key '%s' requested illegal file" % apikey)
         return False
 
     return True
@@ -430,20 +430,19 @@ def is_wifi_password(password, db_entry):
         and the str returns a reason, if it is not a valid password.
     """
     _, password_temp_file = tempfile.mkstemp(prefix="psknow_backend")
-    _, hcx_temp_file = tempfile.mkstemp(prefix="psknow_backend")
-
-    with open(password_temp_file, "w") as fd:
-        fd.write(password)
 
     try:
-        Configuration.logger.info("Database entry, 'is_password' function, api.py %s" % db_entry)
-        capture = Scheduler.get_22000_data(db_entry)
+        Configuration.logger.info("Database entry, '%s' function, api.py %s" % (is_wifi_password.__name__, db_entry))
+        capture = Scheduler.generate_22000_from_wifi_db_entry(db_entry)
         if capture.startswith("WPA"):
             capture = capture[7:-3]
 
         if capture == "":
             Configuration.logger.error("Could not match database MAC to 16800/22000 file to retrieve PMKID/handshake")
             return False, "Failed to retrieve PMKID/handshake from file to password check."
+
+        with open(password_temp_file, "w") as fd:
+            fd.write(password)
 
         wifi_hash = "-I %s" % capture
         command = 'aircrack-ng %s -w %s --bssid %s' % (wifi_hash, password_temp_file, db_entry["handshake"]["MAC"])
@@ -466,7 +465,6 @@ def is_wifi_password(password, db_entry):
         return False, "Unexpected exception in password checking."
     finally:
         os.remove(password_temp_file)
-        os.remove(hcx_temp_file)
 
 
 # Decorator that checks the validity of a API key sent
