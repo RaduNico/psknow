@@ -5,12 +5,12 @@ table {
 }
 
 th, td {
-  text-align: left;
+  text-align: center;
   padding: 8px;
 }
 
 td:last-child, th:last-child {
- text-align: right;
+ text-align: center;
 }
 
 tr:nth-child(even){background-color: #6ec071}

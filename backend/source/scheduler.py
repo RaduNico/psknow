@@ -11,20 +11,41 @@ from copy import deepcopy
 
 
 class Scheduler:
-    # prios = [{rule_name: rule_prio}] - priorities only for possible rules
+    # attributes = [{rule_name: rule_prio, rule_language}] - priorities only for possible rules
     # crt = [{tried_rule_name: 1}] - all tried rules for current hs
     mapper_template = "function() {" \
-                      " var prios = %s;" \
+                      " var attributes = %s;" \
                       " var result_name = '';" \
                       " var result_prio = 900000;" \
                       " var crt = {};" \
+                      " for (var name in attributes) { " \
+                      "     var valid_rule = false;" \
+                      "     for (var rule_language in attributes[name][1]) {" \
+                      "         if (attributes[name][1][rule_language] === 'none') { " \
+                      "             valid_rule = true;" \
+                      "             break;" \
+                      "         }" \
+                      "         for (var hs_language in this['languages']) { " \
+                      "             if (attributes[name][1][rule_language] === this['languages'][hs_language]) { " \
+                      "                 valid_rule = true;" \
+                      "                 break;" \
+                      "             }" \
+                      "         }" \
+                      "         if (valid_rule === true) {" \
+                      "             break;" \
+                      "         }" \
+                      "     }" \
+                      "     if (valid_rule === false) {" \
+                      "         delete attributes[name];" \
+                      "     }" \
+                      " }" \
                       " for (var iter in this['handshake']['tried_dicts']) {" \
                       " 	crt[this['handshake']['tried_dicts'][iter]] = 1;" \
                       " }" \
-                      " for (var name in prios) {" \
-                      " 	if ( crt[name] !== 1 && prios[name] < result_prio) {" \
+                      " for (var name in attributes) {" \
+                      " 	if (crt[name] !== 1 && attributes[name][0] < result_prio) {" \
                       " 		result_name = name;" \
-                      " 		result_prio = prios[name];" \
+                      " 		result_prio = attributes[name][0];" \
                       " 	}" \
                       " }" \
                       " var result = {};" \
@@ -189,7 +210,7 @@ class Scheduler:
     def get_22000_data(crt_capture):
         """
             This is a temporary fix needed until a better result checking
-            method is implemented. This should be removed as soon as possible.
+            method is implemented. This should be removed as soon as po ssible.
             Do not use this method.
         :param crt_capture:
         :return:
@@ -197,6 +218,7 @@ class Scheduler:
         intermediary = dict()
         intermediary['date_added'] = crt_capture['date_added']
         intermediary['priority'] = crt_capture['priority']
+        intermediary['languages'] = crt_capture['languages']
         intermediary['id'] = crt_capture['id']
         intermediary['path'] = crt_capture['path']
         intermediary['file_type'] = crt_capture['file_type']
@@ -225,7 +247,7 @@ class Scheduler:
             if not_good:
                 continue
 
-            result[rule_name] = rule["priority"]
+            result[rule_name] = [rule["priority"], rule["languages"]]
         return result
 
     @staticmethod
@@ -243,6 +265,7 @@ class Scheduler:
         # Lock this in order to ensure that multiple threads do not reserve the same handshake
         with Configuration.wifis_lock:
             mapper = Code(Scheduler.mapper_template % Scheduler.get_all_possible_rules(client_capabilities))
+
             try:
                 response = Configuration.wifis.map_reduce(mapper, Scheduler.reducerf, {"inline": 1}, query=query)
             except Exception as e:

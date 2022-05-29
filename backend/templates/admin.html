@@ -12,40 +12,42 @@
     </script>
 </head>
 <body>
-<ul class=navbar>
-  <li><a href='/'>Home</a></li>
-  <li><a class="active" href='/admin/'>Admin</a></li>
-  <li style="float:right"><a href='/logout/'>Logout</a></li>
-</ul>
+  <ul class=navbar>
+    <li><a href='/'>Home</a></li>
+    <li><a class="active" href='/admin/'>Admin</a></li>
+    <li><a href='/rules/'>Rules</a></li>
+    <li style="float:right"><a href='/logout/'>Logout</a></li>
+  </ul>
 
-<br>
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for type,message in messages %}
-      {% if type == 'success' %}
-        <div style='color:green'>
-          {{ message }}
-        </div>
-      {% else%}
-        <div style='color:red'>
-          {{ message }}
-        </div>
-      {% endif %}
-    {% endfor %}
-  {% else %}
-    <br>
-  {% endif %}
-{% endwith %}
+  <br>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for type,message in messages %}
+        {% if type == 'success' %}
+          <div style='color:green'>
+            {{ message }}
+          </div>
+        {% else%}
+          <div style='color:red'>
+            {{ message }}
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <br>
+    {% endif %}
+  {% endwith %}
 
-<form action="/admin/" method="post">
-<select name="workload" id="select_workload">
-  <option id="option_1" value="1">1) Low Performance, Minimal Impact</option>
-  <option id="option_2" value="2">2) Default Performance, Noticeable Impact</option>
-  <option id="option_3" value="3">3) High Performance, Unresponsive Impact</option>
-  <option id="option_4" value="4">4) V. High Performance, Headless Impact</option>
-</select>
-<input type="checkbox" name="force_checkbox" value="force">Force restart?<br>
-<input type="submit"/> </form>
+  <form action="/admin/" method="post">
+    <select name="workload" id="select_workload">
+      <option id="option_1" value="1">1) Low Performance, Minimal Impact</option>
+      <option id="option_2" value="2">2) Default Performance, Noticeable Impact</option>
+      <option id="option_3" value="3">3) High Performance, Unresponsive Impact</option>
+      <option id="option_4" value="4">4) V. High Performance, Headless Impact</option>
+    </select>
+    <input type="checkbox" name="force_checkbox" value="force">Force restart?<br>
+    <input type="submit"/>
+  </form>
 
 </body>
 </html>

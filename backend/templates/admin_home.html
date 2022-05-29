@@ -35,123 +35,124 @@
     <link rel="stylesheet" type="text/css" href="/css/navbar.css">
 </head>
 <body>
-<ul class=navbar>
-  <li><a class="active" href='/'>Home</a></li>
-  <li><a href='/admin/'>Admin</a></li>
-  <li style="float:right"><a href='/logout/'>Logout</a></li>
-</ul>
+    <ul class=navbar>
+      <li><a class="active" href='/'>Home</a></li>
+      <li><a href='/admin/'>Admin</a></li>
+      <li><a href='/rules/'>Rules</a></li>
+      <li style="float:right"><a href='/logout/'>Logout</a></li>
+    </ul>
 
-<br>
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for type,message in messages %}
-      {% if type == 'success' %}
-        <div style='color:green'>
-          {{ message }}
-        </div>
-      {% else%}
-        <div style='color:red'>
-          {{ message }}
-        </div>
+    <br>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for type,message in messages %}
+          {% if type == 'success' %}
+            <div style='color:green'>
+              {{ message }}
+            </div>
+          {% else%}
+            <div style='color:red'>
+              {{ message }}
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <br>
       {% endif %}
-    {% endfor %}
-  {% else %}
-    <br>
-  {% endif %}
-{% endwith %}
+    {% endwith %}
 
-{% if user_handshakes|length > 0 %}
-    {% for user_hs_pair in user_handshakes %}
-        <div class="userbox">
-        <h2>{{ user_hs_pair[0] }}</h2>
+    {% if user_handshakes|length > 0 %}
+        {% for user_hs_pair in user_handshakes %}
+            <div class="userbox">
+            <h2>{{ user_hs_pair[0] }}</h2>
 
-        <div class='container'>
-            <form>
-                <h4>
-                    <input type="button" id={{user_hs_pair[0]}}_btn
-                           {% if permissions[user_hs_pair[0]] %}
-                                style="color:green" class="greenbtn"
-                           {% else %}
-                                style="color:red" class="redbtn"
-                           {% endif %}
-                    />
-                    <label for={{user_hs_pair[0]}}_btn> Grant API access?</label>
+            <div class='container'>
+                <form>
+                    <h4>
+                        <input type="button" id={{user_hs_pair[0]}}_btn
+                               {% if permissions[user_hs_pair[0]] %}
+                                    style="color:green" class="greenbtn"
+                               {% else %}
+                                    style="color:red" class="redbtn"
+                               {% endif %}
+                        />
+                        <label for={{user_hs_pair[0]}}_btn> Grant API access?</label>
 
-                    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-                    <script type=text/javascript>
-                            $(function() {
-                              $('#{{user_hs_pair[0]}}_btn').bind('click', function() {
-                                $.getJSON('/change_permissions/{{user_hs_pair[0]}}',
-                                    function(response) {
-                                       if (response.data == true) {
-                                            document.getElementById("{{user_hs_pair[0]}}_btn").style.background="green";
-                                       } else {
-                                            document.getElementById("{{user_hs_pair[0]}}_btn").style.background="red";
-                                       }
+                        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+                        <script type=text/javascript>
+                                $(function() {
+                                  $('#{{user_hs_pair[0]}}_btn').bind('click', function() {
+                                    $.getJSON('/change_permissions/{{user_hs_pair[0]}}',
+                                        function(response) {
+                                           if (response.data == true) {
+                                                document.getElementById("{{user_hs_pair[0]}}_btn").style.background="green";
+                                           } else {
+                                                document.getElementById("{{user_hs_pair[0]}}_btn").style.background="red";
+                                           }
+                                    });
+                                    return false;
+                                  });
                                 });
-                                return false;
-                              });
-                            });
-                    </script>
-                </h4>
-            </form>
-        </div>
+                        </script>
+                    </h4>
+                </form>
+            </div>
 
-        {% if user_hs_pair[1]["uncracked"]|length > 0 %}
-            <table>
-                <tr>
-                    <th>Wifi Name</th>
-                    <th>Wifi MAC</th>
-                    <th>HS Type</th>
-                    <th>Date Added</th>
-                    <th>Tried rules</th>
-                    <th>Estimated time</th>
-                </tr>
-                {% for handshake in user_hs_pair[1]["uncracked"] %}
-                <tr>
-                    <td>{{ handshake["ssid"] }}</td>
-                    <td>{{ handshake["mac"] }}</td>
-                    <td>{{ handshake["hs_type"] }}</td>
-                    <td>{{ handshake["date_added"] }}</td>
-                    <td>{{ handshake["tried_rules"] }}</td>
-                    <td>{{ handshake["eta"] }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-        {% else %}
-            <h2>No uncracked handshakes</h2>
-        {% endif %}
-        {% if user_hs_pair[1]["cracked"]|length > 0 %}
-            <br>
-            <table>
-                <tr>
-                    <th>Wifi Name</th>
-                    <th>Wifi MAC</th>
-                    <th>HS Type</th>
-                    <th>Date Added</th>
-                    <th>Cracked by</th>
-                    <th>Password</th>
-                    <th>Date Cracked</th>
-                </tr>
-                {% for handshake in user_hs_pair[1]["cracked"] %}
-                <tr>
-                    <td>{{ handshake["ssid"] }}</td>
-                    <td>{{ handshake["mac"] }}</td>
-                    <td>{{ handshake["hs_type"] }}</td>
-                    <td>{{ handshake["date_added"] }}</td>
-                    <td>{{ handshake["cracked_by"] }}</td>
-                    <td>{{ handshake["password"] }}</td>
-                    <td>{{ handshake["date"] }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-        {% endif %}
-        </div>
-    <br>
-    {% endfor %}
-{% else %}
-    <h2>Get some users</h2>
-{% endif %}
+            {% if user_hs_pair[1]["uncracked"]|length > 0 %}
+                <table>
+                    <tr>
+                        <th>Wifi Name</th>
+                        <th>Wifi MAC</th>
+                        <th>HS Type</th>
+                        <th>Date Added</th>
+                        <th>Tried rules</th>
+                        <th>Estimated time</th>
+                    </tr>
+                    {% for handshake in user_hs_pair[1]["uncracked"] %}
+                    <tr>
+                        <td>{{ handshake["ssid"] }}</td>
+                        <td>{{ handshake["mac"] }}</td>
+                        <td>{{ handshake["hs_type"] }}</td>
+                        <td>{{ handshake["date_added"] }}</td>
+                        <td>{{ handshake["tried_rules"] }}</td>
+                        <td>{{ handshake["eta"] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <h2>No uncracked handshakes</h2>
+            {% endif %}
+            {% if user_hs_pair[1]["cracked"]|length > 0 %}
+                <br>
+                <table>
+                    <tr>
+                        <th>Wifi Name</th>
+                        <th>Wifi MAC</th>
+                        <th>HS Type</th>
+                        <th>Date Added</th>
+                        <th>Cracked by</th>
+                        <th>Password</th>
+                        <th>Date Cracked</th>
+                    </tr>
+                    {% for handshake in user_hs_pair[1]["cracked"] %}
+                    <tr>
+                        <td>{{ handshake["ssid"] }}</td>
+                        <td>{{ handshake["mac"] }}</td>
+                        <td>{{ handshake["hs_type"] }}</td>
+                        <td>{{ handshake["date_added"] }}</td>
+                        <td>{{ handshake["cracked_by"] }}</td>
+                        <td>{{ handshake["password"] }}</td>
+                        <td>{{ handshake["date"] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+            </div>
+        <br>
+        {% endfor %}
+    {% else %}
+        <h2>Get some users</h2>
+    {% endif %}
 
 </body>
 </html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PSKnow</title>
+    <meta http-equiv='cache-control' content='no-cache'>
+    <meta http-equiv='expires' content='0'>
+    <meta http-equiv='pragma' content='no-cache'>
+  <style>
+    body {font-family: Arial, Helvetica, sans-serif;}
+    form {border: 3px solid #f1f1f1;}
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="/css/table.css">
+  <link rel="stylesheet" type="text/css" href="/css/log_reg.css">
+  <link rel="stylesheet" type="text/css" href="/css/navbar.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+</head>
+<body>
+
+<ul class=navbar>
+    <li><a href='/'>Home</a></li>
+    <li><a href='/admin/'>Admin</a></li>
+    <li><a class="active" href='/rules/'>Rules</a></li>
+    <li style="float:right"><a href='/logout/'>Logout</a></li>
+</ul>
+
+<br>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for type,message in messages %}
+      {% if type == 'success' %}
+        <div style='color:green'>
+          {{ message }}
+        </div>
+      {% else%}
+        <div style='color:red'>
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <br>
+  {% endif %}
+{% endwith %}
+
+<h2>Rules management:</h2>
+<a href="../add_rule">
+    <button type="button" id="add_rule">Click to add a new rule</button><br><br><br>
+</a>
+
+{% if rules|length > 0 %}
+    <table>
+        <tr>
+            <th>Priority</th>
+            <th>Name</th>
+            <th>Info</th>
+            <th>Edit</th>
+            <th>Delete</th>
+        </tr>
+        {% for rule in rules %}
+        <tr>
+            <td>{{ rule["priority"] }}</td>
+            <td>{{ rule["name"] }}</td>
+            <td> <button type="button" id={{rule["name"]}}_details_btn onclick="see_details({{ rule }});">See more details</button> </td>
+            <td>
+                <form action="/edit_rule/{{rule['name']}}" method="get">
+                    <input type="hidden" name="rule_to_edit" value="{{rule['name']}}" />
+                    <button type="submit">Edit</button>
+                </form>
+            </td>
+            <td>
+                <form action="/delete_rule/" method="post">
+                    <input type="hidden" name="rule_to_delete" value="{{rule['name']}}" />
+                    <button type="submit">Delete</button>
+                 </form>
+            </td>
+
+<!--            <td> <button type="button" id={{rule["name"]}}_edit_btn onclick="edit_rule()">Edit</button> </td>-->
+<!--            <td> <button type="button" id={{rule["name"]}}_delete_btn>Delete</button> </td>-->
+<!--            <script type=text/javascript>-->
+<!--                $(function() {-->
+<!--                  $('#{{rule["name"]}}_delete_btn').bind('click', function() {-->
+<!--                    $.getJSON('/delete_rule/{{rule["name"]}}', function(response) {});-->
+<!--                    return false;-->
+<!--                  });-->
+<!--                });-->
+<!--            </script>-->
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <h2>No rules loaded at the moment</h2>
+{% endif %}
+
+<script>
+    function see_details(rule) {
+        var details = '<table style="width:100%" border=1>';
+        for (var key in rule) {
+            if (rule[key] === "") {
+                details = details + '<tr><td><b>' + key + '</b></td><td>-</td></tr>';
+            } else {
+                details = details + '<tr><td><b>' + key + '</b></td><td>' + rule[key] + '</td></tr>';
+            }
+        }
+        details = details + '</table>';
+        Swal.fire({
+           title: 'Rule info',
+           html: details,
+           type: "info",
+           width: '850px'
+        })
+    }
+
+    function edit_rule() {
+        Swal.fire('edited')
+    }
+</script>
+</body>
+</html>

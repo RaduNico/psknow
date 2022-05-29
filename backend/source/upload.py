@@ -4,6 +4,7 @@ import os
 import string
 import random
 import shutil
+import re
 from .process import Process
 from .config import Configuration
 from .wrappers import die, not_admin, check_db_conn
@@ -13,6 +14,8 @@ from werkzeug.utils import secure_filename
 from flask import flash, redirect, Blueprint, request, render_template
 from flask_login import login_required, current_user
 from copy import deepcopy
+
+from geopy.geocoders import Nominatim
 
 upload_api = Blueprint('upload_api', __name__)
 
@@ -325,7 +328,23 @@ def upload_file():
         return redirect(request.url)
 
     files = request.files.getlist('file')
-    Configuration.logger.info(files)
+    languages = request.form.getlist('language')
+    coordinates = request.form.getlist('coord')
+    suggested_passwords = request.form.getlist('tags')
+
+    # Convert list of coordinates to a dict of coordinates
+    coord = [0.0, 0.0]
+    location = ""
+    address = ""
+
+    if coordinates != ['']:
+        coord_lst = re.split("[, :]+", coordinates[0])
+        coord_dct = {coord_lst[i]: coord_lst[i + 1] for i in range(0, len(coord_lst), 2)}
+        locator = Nominatim(user_agent="myGeocoder")
+        coord = [coord_dct["Lat"], coord_dct["Lon"]]
+        location = locator.reverse(coord)
+        address = location.raw['address']
+
     # Check for empty filename
     if len(files) == 0:
         Configuration.logger.info("No selected file.")
@@ -346,11 +365,20 @@ def upload_file():
 
         new_entry = deepcopy(Configuration.default_wifi)
 
-        # new_entry["location"]["keyword"] = #TODO POST keyword
-        # new_entry["location"]["coordinates"] = #TODO POST coordinates
+        if suggested_passwords != ['']:
+            new_entry["location"]["keyword"] = suggested_passwords
+
+        if location != "":
+            new_entry["location"]["address"] = location.address
+
+        if address != "":
+            new_entry["location"]["city"] = address.get('city', '')
+
+        new_entry["location"]["coordinates"] = coord
         new_entry["date_added"] = datetime.datetime.now()
         new_entry["users"] = [current_user.get_id()]
         new_entry["priority"] = 0
+        new_entry["languages"] = languages
 
         # Validate handshake and get file type and handshake type
         valid_handshake, wifi_entries = check_handshake(tmp_path, file.filename, new_entry)

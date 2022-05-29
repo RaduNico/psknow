@@ -44,7 +44,7 @@ class Configuration(object):
                     "location": {"address": "",
                                  "city": "",
                                  "coordinates": [0.0, 0.0],
-                                 "keyword": ""},
+                                 "keyword": []},
 
                     "path": None,
                     "handshake": None,
@@ -52,6 +52,7 @@ class Configuration(object):
 
                     "users": [],
                     "priority": 0,
+                    "languages": [],
                     "details": ""}
 
     default_handshake = {  # Metadata
@@ -71,6 +72,9 @@ class Configuration(object):
 
     # Handshake save folder
     save_file_location = 'handshakes'
+
+    # Number of languages
+    nr_languages = 5
 
     # Handshake verification
     pmkid_16800_regex = re.compile("^[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)[\n]?$")
@@ -293,6 +297,7 @@ class Configuration(object):
         path = os.path.join(Configuration.static_folder, "crack", path.split("/")[-1])
 
         if not os.path.exists(path):
+            Configuration.logger.error("Could not get mtime. File not found: %s" % path)
             return None, path
 
         return os.stat(path).st_mtime, path
@@ -362,7 +367,7 @@ class Configuration(object):
                         Configuration.logger.info("File '%s' was updated, reloading data" % name)
                         Configuration.set_cap_dict_data(name, data, final_dict)
                     else:
-                        Configuration.logger.debug("Loaded data for '%s' from generated file." % name)
+                        Configuration.logger.info("Loaded data for '%s' from generated file." % name)
                         final_dict[name] = deepcopy(old_cap_dict[name])
                 # Data for this entry is not present in generated file
                 else:

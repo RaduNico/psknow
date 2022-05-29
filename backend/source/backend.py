@@ -1,7 +1,13 @@
+import os
 import random
 import string
+import subprocess
 
 from werkzeug.exceptions import abort
+import json
+
+from werkzeug.utils import secure_filename
+
 from .config import Configuration
 from .user import User, enc_bcrypt
 from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
@@ -45,12 +51,35 @@ def get_uncracked_tuple(document):
     result["mac"] = handshake["MAC"]
     result["hs_type"] = handshake["handshake_type"]
     result["date_added"] = document["date_added"].strftime('%H:%M - %d.%m.%Y')
+
     if handshake["active"]:
         result["tried_rules"] = "Trying rule %s" % document["reserved"]["tried_rule"]
         result["eta"] = handshake["eta"]
-    else:
-        result["tried_rules"] = "%s/%s" % (len(handshake["tried_dicts"]), Configuration.number_rules)
-        result["eta"] = ""
+        return result
+
+    try:
+        with open('rules') as json_data:
+            rules = json.load(json_data)
+    except Exception as e:
+        Configuration.log_fatal("Error trying to load rules data: %s" % e)
+
+    valid_rules = 0
+    for rule in rules:
+        valid = False
+        for rule_language in rule["languages"]:
+            if rule_language == 'none':
+                valid_rules = valid_rules + 1
+                break
+            for hs_language in document["languages"]:
+                if hs_language == rule_language:
+                    valid_rules = valid_rules + 1
+                    valid = True
+                    break
+            if valid:
+                break
+
+    result["tried_rules"] = "%s/%s" % (len(handshake["tried_dicts"]), int(valid_rules))
+    result["eta"] = ""
 
     return result
 
@@ -88,6 +117,266 @@ def admin_panel():
         Configuration.set_admin_table(update)
 
         return render_template('admin.html', workload=workload)
+    else:
+        Configuration.logger.error("Unsupported method!")
+        abort(404)
+
+
+# @blob_api.route('/delete_rule/<name>', methods=['GET'])
+# @ajax_requires_admin
+# def delete_rule(name):
+#     rules = []
+#
+#     for rule in Configuration.get_active_rules():
+#         if rule["name"] == name:
+#             Configuration.rule_dict.pop(name, 'No Key found')
+#         else:
+#             rules.append(rule)
+#
+#     with open('rules', 'w') as filehandle:
+#         json.dump(rules, filehandle, indent=4)
+#
+#     return render_template('rules.html', rules=rules)
+
+
+@blob_api.route('/rules/', methods=['GET'])
+@requires_admin
+def handle_rules():
+    return render_template('rules.html', rules=Configuration.get_active_rules())
+
+
+@blob_api.route('/delete_rule/', methods=['POST'])
+@requires_admin
+def delete_rule():
+    rule_to_delete = request.form.get("rule_to_delete")
+
+    if rule_to_delete in Configuration.rule_dict:
+        del Configuration.rule_dict[rule_to_delete]
+    else:
+        Configuration.logger.info("No key found")
+
+    with open('rules', 'w') as filehandle:
+        json.dump(Configuration.get_active_rules(), filehandle, indent=4)
+
+    return redirect(url_for("blob_api.handle_rules"))
+
+
+@blob_api.route('/edit_rule/<name>', methods=['GET', 'POST'])
+@requires_admin
+def edit_rule(name):
+    rule_to_edit = Configuration.rule_dict[name]
+    priorities = []
+    names = []
+
+    for rule in Configuration.get_active_rules():
+        priorities.append(rule["priority"])
+        names.append(rule["name"])
+
+    if request.method == 'GET':
+        if check_db_conn() is None:
+            flash("DATABASE IS DOWN!")
+            return render_template('rules.html', rules=Configuration.get_active_rules())
+
+        if rule_to_edit == {}:
+            return render_template('rules.html', rules=Configuration.get_active_rules())
+        else:
+            return render_template('edit_rule.html', priorities=priorities, names=names, rule=rule_to_edit)
+    elif request.method == 'POST':
+        new_rule = {"name": request.form.get("name", None), "type": request.form.get("type", None),
+                    "priority": int(request.form.get("priority", None)), "path": request.form.get("path", None)}
+
+        if new_rule["type"] == "wordlist" or new_rule["type"] == "filemask_hashcat":
+            new_rule["wordsize"] = int(request.form.get("wordsize", None))
+        elif new_rule["type"] == "john":
+            new_rule["rule"] = request.form.get("rule", None)
+            new_rule["wordsize"] = int(request.form.get("wordsize", None))
+        elif new_rule["type"] == "generated":
+            new_rule["command"] = request.form.get("command", None)
+            new_rule["wordsize"] = int(request.form.get("wordsize", None))
+        elif new_rule["type"] == "mask_hashcat":
+            new_rule["mask_hashcat"] = request.form.get("pattern", None)
+            new_rule["wordsize"] = int(request.form.get("wordsize", None))
+        elif new_rule["type"] == "scrambler":
+            new_rule["wordsize"] = 0
+            new_rule["path"] = ""
+
+        # Languages - all languages/no language selected = none
+        new_rule["languages"] = request.form.getlist("languages", None)
+        if len(new_rule["languages"]) == 0 or len(new_rule["languages"]) == Configuration.nr_languages:
+            new_rule["languages"] = "none"
+
+        # Description of the rule
+        new_rule["desc"] = request.form.get("description", None)
+
+        # Examples from dictionary
+        str_examples = request.form.get("examples", None)
+        examples = list(str_examples.split(","))
+        examples.pop()
+        new_rule["examples"] = examples
+
+        # Initialise reqs
+        new_rule["reqs"] = request.form.getlist("reqs", None)
+
+        # Link
+        new_rule["link"] = request.form.get("link", None)
+
+        # Save the dictionary and process it for the path and wordsize
+        # available for the types "wordlist", "john", "generated", "filemask_hashcat"
+        if 'file' in request.files:
+            dictionary = request.files.get("file")
+            filename = secure_filename(dictionary.filename)
+
+            if filename != '':
+                # Save dictionary
+                dictionary.save(os.path.join("static/crack", filename))
+                os.system("cp " + "static/crack/" + filename + " ../cracker/dict")
+
+                # Compute wordsize and path
+                p1 = subprocess.Popen(["wc", "-l", "static/crack/" + filename], stdout=subprocess.PIPE)
+                p2 = subprocess.Popen(["awk", '{print $1}'], stdin=p1.stdout, stdout=subprocess.PIPE, universal_newlines=True)
+                if new_rule["type"] != "generated":
+                    new_rule["wordsize"] = p2.stdout.read()[:-1]
+                new_rule["path"] = filename
+            else:
+                if new_rule["path"] == "":
+                    flash("You forgot to upload the file, didn't you? Try again!")
+                    return render_template('edit_rule.html', priorities=priorities, names=names, rule=rule_to_edit)
+
+        # Requirements for cracking
+        if new_rule["type"] == "scrambler":
+            new_rule["reqs"] = ["john", "hashcat"]
+        elif new_rule["type"] == "john":
+            new_rule["reqs"] = ["hashcat", "john", new_rule["path"], "john-local.conf"]
+        elif new_rule["type"] == "mask_hashcat":
+            new_rule["reqs"] = ["hashcat"]
+        else:
+            new_rule["reqs"] = ["hashcat", new_rule["path"]]
+
+        # Modify rule configuration if changes were made
+        rules = []
+
+        if new_rule["name"] not in Configuration.rule_dict:
+            # The name changed => add a new rule
+            Configuration.rule_dict[new_rule["name"]] = new_rule
+            rules = Configuration.get_active_rules()
+        else:
+            # Rule name is the same => edit the actual rule (if necessary)
+            shared_items = {k: rule_to_edit[k] for k in rule_to_edit if k in new_rule and rule_to_edit[k] == new_rule[k]}
+            if len(shared_items) == len(rule_to_edit.keys()):
+                # No changes were made
+                return render_template('rules.html', rules=Configuration.get_active_rules())
+            else:
+                # Changes were made
+                Configuration.rule_dict[new_rule["name"]] = new_rule
+                for rule in Configuration.get_active_rules():
+                    if rule["name"] == new_rule["name"]:
+                        rules.append(new_rule)
+                    else:
+                        rules.append(rule)
+
+        # Write the changes in the rules file
+        with open('rules', 'w') as filehandle:
+            json.dump(rules, filehandle, indent=4)
+
+        return redirect(url_for("blob_api.handle_rules"))
+        # return render_template('rules.html', rules=rules)
+
+    else:
+        Configuration.logger.error("Unsupported method!")
+        abort(404)
+
+
+@blob_api.route('/add_rule/', methods=['GET', 'POST'])
+@requires_admin
+def add_rule():
+    if request.method == 'GET':
+        if check_db_conn() is None:
+            flash("DATABASE IS DOWN!")
+            return render_template('rules.html', rules=Configuration.get_active_rules())
+
+        priorities = []
+        names = []
+        for rule in Configuration.get_active_rules():
+            priorities.append(rule["priority"])
+            names.append(rule["name"])
+        return render_template('add_rule.html', priorities=priorities, names=names)
+
+    elif request.method == 'POST':
+        new_rule = {"name": request.form.get("name", None), "type": request.form.get("type", None),
+                    "priority": int(request.form.get("priority", None)), "path": ""}
+
+        if new_rule["type"] == "wordlist" or new_rule["type"] == "filemask_hashcat":
+            new_rule["wordsize"] = 0
+        elif new_rule["type"] == "john":
+            new_rule["rule"] = request.form.get("rule", None)
+            new_rule["wordsize"] = 0
+        elif new_rule["type"] == "generated":
+            new_rule["command"] = request.form.get("command", None)
+            new_rule["wordsize"] = 0  # modify
+        elif new_rule["type"] == "mask_hashcat":
+            new_rule["mask_hashcat"] = request.form.get("pattern", None)
+            new_rule["wordsize"] = 0  # modify
+        elif new_rule["type"] == "scrambler":
+            new_rule["wordsize"] = 0
+
+        # Languages - all languages/no language selected = none
+        new_rule["languages"] = request.form.getlist("languages", None)
+        if len(new_rule["languages"]) == 0 or len(new_rule["languages"]) == Configuration.nr_languages:
+            new_rule["languages"] = "none"
+
+        # Description of the rule
+        new_rule["desc"] = request.form.get("description", None)
+
+        # Examples from dictionary
+        new_rule["examples"] = request.form.getlist("examples", None)
+
+        # Initialise reqs
+        new_rule["reqs"] = []
+
+        # Link
+        new_rule["link"] = request.form.get("link", None)
+
+        # Save the dictionary and get the path + wordsize
+        if new_rule["type"] in ["wordlist", "john", "generated", "filemask_hashcat"]:
+            if 'file' not in request.files:
+                Configuration.logger.info("No file uploaded.")
+                flash("No file uploaded.")
+                return redirect(request.url)
+
+            # Save dictionary
+            dictionary = request.files.get("file")
+            filename = secure_filename(dictionary.filename)
+            dictionary.save(os.path.join("static/crack", filename))
+            os.system("cp " + "static/crack/" + filename + " ../cracker/dict")
+
+            # Compute path and wordsize
+            p1 = subprocess.Popen(["wc", "-l", "static/crack/" + filename], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(["awk", '{print $1}'], stdin=p1.stdout, stdout=subprocess.PIPE, universal_newlines=True)
+            new_rule["path"] = filename
+            if new_rule["type"] != "generated":
+                new_rule["wordsize"] = p2.stdout.read()[:-1]
+
+        # Requirements for cracking
+        if new_rule["type"] == "scrambler":
+            new_rule["reqs"] = ["john", "hashcat"]
+        elif new_rule["type"] == "john":
+            new_rule["reqs"] = ["hashcat", "john", new_rule["path"], "john-local.conf"]
+        elif new_rule["type"] == "mask_hashcat":
+            new_rule["reqs"] = ["hashcat"]
+        else:
+            new_rule["reqs"] = ["hashcat", new_rule["path"]]
+
+        # Save rule in the configuration
+        Configuration.rule_dict[new_rule["name"]] = new_rule
+        rules = Configuration.get_active_rules()
+        rules.append(new_rule)
+
+        # Add the new rule to rules file
+        with open('rules', 'w') as filehandle:
+            json.dump(rules, filehandle, indent=4)
+
+        # return render_template('rules.html', rules=rules)
+        return redirect(url_for("blob_api.handle_rules"))
     else:
         Configuration.logger.error("Unsupported method!")
         abort(404)
