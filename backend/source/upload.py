@@ -73,11 +73,9 @@ def get_22000_file(filepath, is_16800=False):
 
     Process(command, crit=True).wait()
 
-    # TODO this does not properly check if the command was successful. The check might be completely useless,
-    #  as long as the temp_filename exists. Temporarily removing it
-    # if "written to" not in stdout:
-    #     os.remove(temp_filename)
-    #     return None
+    if os.stat(temp_filename).st_size == 0:
+        os.remove(temp_filename)
+        return None
 
     return temp_filename
 
@@ -224,7 +222,6 @@ def check_handshake(file_path, filename, wifi_entry):
     die(not os.path.isfile(file_path), "File %s does not exist!" % file_path)
 
     # We add to wifi_entry: file_type, handshake[SSID, MAC, open, handshake_type]
-    # We will add later: handshake[tried_dicts, password, date_cracked] TODO is this mention necessary?
     if not filename.endswith((".cap", ".pcap", ".pcapng", ".16800", ".22000")):
         Configuration.logger.info("Cannot process file type for the file '%s'" % filename)
         flash("Invalid filetype for file '%s'" % filename)
@@ -243,82 +240,80 @@ def check_handshake(file_path, filename, wifi_entry):
         die(True, "Filetype '%s' not properly covered by if conditions" % wifi_entry["file_type"])
 
     if temp_filename is None:
+        # if temp_filename variable is None the file does not exist
         return False, None
 
-    show_command = "hashcat --potfile-path=%s --left -m 22000 %s" % (Configuration.empty_pot_path, temp_filename)
+    try:
+        show_command = "hashcat --potfile-path=%s --left -m 22000 %s" % (Configuration.empty_pot_path, temp_filename)
 
-    # Test with hashcat if files contain valid data
-    mac_ssid_list = []
+        # Test with hashcat if files contain valid data
+        mac_ssid_list = []
 
-    output = Process(show_command, crit=True).stdout()
-    if output is None or len(output) <= 0:
-        return False, None
-
-    for cracked_target in output.split():
-        regex_matches = Configuration.regex_22000.match(cracked_target)
-        # if hs_type == "PMKID":
-        #     cracker_obj = Configuration.regex_pmkid.match(cracked_target)
-        # else:
-        #     cracker_obj = Configuration.regex_handshake.match(cracked_target)
-
-        if regex_matches is None:
-            Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
-            continue
-
-        handshake_type = "PMKID" if regex_matches.group(1) == "1" else "WPA"
-        mac = ":".join(a + b for a, b in zip(regex_matches.group(2)[::2], regex_matches.group(2)[1::2]))
-
-        # TODO what do if ssid is not printable? This might erorr out.
-        ssid = bytearray.fromhex(regex_matches.group(3)).decode()
-
-        mac_ssid_list.append((mac, ssid, handshake_type))
-
-    for mac, ssid, hs_type in mac_ssid_list:
-        # Remove duplicate entries in the same file - filter by MAC
-        flag = False
-        for hs in entries:
-            if hs["handshake"]["MAC"] == mac:
-                flag = True
-                break
-        if flag:
-            continue
-
-        handshake = deepcopy(Configuration.default_handshake)
-        handshake["MAC"] = mac
-        handshake["SSID"] = ssid
-        handshake["handshake_type"] = hs_type
-
-        # Avoid duplicate 'duplicate message' for files with both PMKID and handshakes
-        if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
-            continue
-
-        tmp_wifi = deepcopy(wifi_entry)
-
-        # Generate unique ID for our document
-        tmp_wifi["id"] = get_unique_id()
-
-        tmp_wifi["handshake"] = handshake
-
-        is_duplicate, error = treat_duplicate(tmp_wifi)
-
-        if error:
+        output = Process(show_command, crit=True).stdout()
+        if output is None or len(output) <= 0:
             return False, None
 
-        if is_duplicate:
-            duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
-            duplicate_flag = True
-            continue
+        for cracked_target in output.split():
+            regex_matches = Configuration.regex_22000.match(cracked_target)
 
-        entries.append(tmp_wifi)
+            if regex_matches is None:
+                Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
+                continue
 
-    if must_delete_temp_file:
-        os.remove(temp_filename)
+            handshake_type = "PMKID" if regex_matches.group(1) == "1" else "WPA"
+            mac = ":".join(a + b for a, b in zip(regex_matches.group(2)[::2], regex_matches.group(2)[1::2]))
 
-    if len(entries) == 0:
-        if not duplicate_flag:
-            Configuration.logger.info("No valid handshake found in file '%s'" % filename)
-            flash("No valid handshake found in file '%s'" % filename)
-        return False, None
+            # TODO what do if ssid is not printable? This might erorr out.
+            ssid = bytearray.fromhex(regex_matches.group(3)).decode()
+
+            mac_ssid_list.append((mac, ssid, handshake_type))
+
+        for mac, ssid, hs_type in mac_ssid_list:
+            # Remove duplicate entries in the same file - filter by MAC
+            flag = False
+            for hs in entries:
+                if hs["handshake"]["MAC"] == mac:
+                    flag = True
+                    break
+            if flag:
+                continue
+
+            handshake = deepcopy(Configuration.default_handshake)
+            handshake["MAC"] = mac
+            handshake["SSID"] = ssid
+            handshake["handshake_type"] = hs_type
+
+            # Avoid duplicate 'duplicate message' for files with both PMKID and handshakes
+            if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
+                continue
+
+            tmp_wifi = deepcopy(wifi_entry)
+
+            # Generate unique ID for our document
+            tmp_wifi["id"] = get_unique_id()
+            tmp_wifi["handshake"] = handshake
+
+            is_duplicate, error = treat_duplicate(tmp_wifi)
+
+            if error:
+                return False, None
+
+            if is_duplicate:
+                duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
+                duplicate_flag = True
+                continue
+
+            entries.append(tmp_wifi)
+
+        if len(entries) == 0:
+            # If the duplicate_flag is True it means at least a hash has been found (despite being useless)
+            if not duplicate_flag:
+                Configuration.logger.info("No valid handshake found in file '%s'" % filename)
+                flash("No valid handshake found in file '%s'" % filename)
+            return False, None
+    finally:
+        if must_delete_temp_file:
+            os.remove(temp_filename)
 
     return True, entries
 
