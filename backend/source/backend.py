@@ -1,19 +1,15 @@
-import random
-import string
-
 from werkzeug.exceptions import abort
 from .config import Configuration
-from .user import User, enc_bcrypt
+from .user import User, hash_bcrypt
 from .wrappers import is_admin, requires_admin, check_db_conn, ajax_requires_admin
 
-from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify, current_app
+from flask import render_template, request, redirect, flash, url_for, Blueprint, jsonify  # , current_app
 from flask_login import login_user, logout_user, login_required, current_user
+# from flask_mail import Mail, Message
 
 from .database_helper import update_hs_id, lookup_by_id
 
 from .upload import retire_handshake
-
-from flask_mail import Mail, Message
 
 blob_api = Blueprint('blob_api', __name__)
 
@@ -123,12 +119,13 @@ def home():
             else:
                 user_handshakes[crt_user]["cracked"].append(get_cracked_tuple(file_structure))
 
-        users_list = list(Configuration.users.find())
-        no_users = len(users_list)
-        for i in range(no_users):
-            crt_user = users_list[i]["username"]
-            if crt_user not in user_handshakes and crt_user != Configuration.admin_account:
-                user_handshakes[crt_user] = {"cracked": [], "uncracked": []}
+        # Add users to the list which do not have any uploaded handshakes
+        users = Configuration.users.find({}, {'_id': 0, 'username': 1})
+
+        for user in users:
+            username = user["username"]
+            if username not in user_handshakes and username != Configuration.admin_account:
+                user_handshakes[username] = {"cracked": [], "uncracked": []}
 
         # Sort based on crack date using raw date field
         for entry in user_handshakes.values():
@@ -171,12 +168,15 @@ def home():
 @blob_api.route('/change_permissions/<name>')
 @ajax_requires_admin
 def change_permissions(name):
-    change = False
+    change = True
+
+    # TODO add try catch
+    # TODO user might not exist
     if Configuration.users.find_one({'username': name})['allow_api']:
-        Configuration.users.update_one({'username': name}, {"$set": {'allow_api': False}})
-    else:
-        Configuration.users.update_one({'username': name}, {"$set": {'allow_api': True}})
-        change = True
+        change = False
+
+    # TODO add try catch
+    Configuration.users.update_one({'username': name}, {"$set": {'allow_api': change}})
 
     return jsonify({"success": True, "data": change})
 
@@ -261,16 +261,44 @@ def login():
             flash("No password introduced!")
             return redirect(request.url)
 
-        if not User.check_credentials(username, password):
-            if not User.check_recovery_credentials(username, password):
-                Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
-                                             (username, password))
-                flash("Incorrect username/password!")
-                return redirect(request.url)
+        # if not User.check_credentials(username, password):
+        #     if not User.check_recovery_credentials(username, password):
+        #         Configuration.logger.warning("Failed login attempt from username = '%s' with password = '%s'" %
+        #                                      (username, password))
+        #         flash("Incorrect username/password!")
+        #         return redirect(request.url)
 
         login_user(User(username))
 
         return redirect(url_for("blob_api.home"))
+
+
+@blob_api.route('/logout/', methods=["GET"])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("blob_api.home"))
+
+
+def apply_password_policy(password):
+    """
+    A function which makes sure a user password abides the password policy.
+    :param password: The checked password
+    :return: Function returns False if the password is not good
+    """
+    if password is None or len(password) == 0:
+        flash("No password selected!")
+        return False
+
+    if len(password) < 6:
+        flash("The chosen password is too short. Please choose a stronger password.")
+        return False
+
+    if len(password) > 256:
+        flash("The chosen password is too long. Use at most 256 characters.")
+        return False
+
+    return True
 
 
 @blob_api.route("/register/", methods=["GET", "POST"])
@@ -289,20 +317,15 @@ def register():
             flash("No username introduced!")
             return redirect(request.url)
 
-        if password is None or len(password) == 0:
-            flash("No password introduced!")
-            return redirect(request.url)
-
-        if len(password) < 6:
-            flash("C'mon... use at least 6 characters... pretty please?")
-            return redirect(request.url)
-
         if Configuration.username_regex.search(username) is None:
             flash("Username should start with a letter and only contain alphanumeric or '-._' characters!")
             return redirect(request.url)
 
-        if len(username) > 150 or len(password) > 150:
-            flash("Either the username or the password is waaaaay too long. Please dont.")
+        if len(username) > 150:
+            flash("Username too long. Use a shorter one.")
+            return redirect(request.url)
+
+        if not apply_password_policy(password):
             return redirect(request.url)
 
         retval = User.create_user(username, password)
@@ -314,123 +337,73 @@ def register():
         return redirect(request.url)
 
 
-@blob_api.route('/logout/', methods=["GET"])
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for("blob_api.home"))
-
-
 @blob_api.route('/profile/', methods=['GET', 'POST'])
 @login_required
 def profile():
     user_entry = Configuration.users.find_one({"username": current_user.get_id()})
 
-    fst_name = ""
-    last_name = ""
-    email = ""
-    password = ""
-    confirm = ""
+    display_email = user_entry["email"]
 
     if request.method == "POST":
-        fst_name = request.form.get("first_name", None)
-        last_name = request.form.get("last_name", None)
         email = request.form.get("email", None)
-        password = request.form.get("password", None)
-        confirm = request.form.get("confirm", None)
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm", "")
 
-    if len(fst_name) > 0:
-        try:
-            if user_entry["first_name"] != fst_name:
-                Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
-        except KeyError:
-            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"first_name": fst_name}})
-    else:
-        try:
-            fst_name = user_entry["first_name"]
-        except KeyError:
-            fst_name = "Enter first name"
-
-    if len(last_name) > 0:
-        try:
-            if user_entry["last_name"] != last_name:
-                Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
-        except KeyError:
-            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"last_name": last_name}})
-    else:
-        try:
-            last_name = user_entry["last_name"]
-        except KeyError:
-            last_name = "Enter last name"
-
-    if len(email) > 0:
-        try:
-            if user_entry["email"] != email:
+        # Change the email if the sent data does not match the existing data
+        if email is not None and user_entry["email"] != email:
+            try:
                 Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
-        except KeyError:
-            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"email": email}})
-    else:
-        try:
-            email = user_entry["email"]
-        except KeyError:
-            email = "Enter email"
+                display_email = email
+            except Exception as e:
+                Configuration.logger.error("db.users: Failed to update user '%s' with error '%s'" %
+                                           (current_user.get_id(), e))
 
-    # password resetting
-    if len(password) == 0 and len(confirm) > 0:
-        flash("Invalid password!")
+        # Change password
+        if len(password) > 0:
+            if not apply_password_policy(password):
+                return redirect(request.url)
 
-    if len(password) > 0:
-        if len(password) < 6:
-            flash("C'mon... use at least 6 characters... pretty please?")
-            return redirect(request.url)
+            if password != confirm:
+                flash("The password and the confirmation password do not match. Please try again.")
+                return redirect(request.url)
 
-        if len(password) > 150:
-            flash("The password is waaaaay too long. Please don't.")
-            return redirect(request.url)
+            Configuration.users.update({"username": current_user.get_id()},
+                                       {"$set": {"password": hash_bcrypt(password)}})
 
-        if password != confirm:
-            flash("The password confirmation does not match.")
-            return redirect(request.url)
-
-        if enc_bcrypt(password) != user_entry["password"]:
-            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"password": enc_bcrypt(password)}})
-            Configuration.users.update({"username": current_user.get_id()}, {"$set": {"recovery_password": ""}})
-
-    return render_template('profile.html', username=current_user.get_id(), first_name=fst_name,
-                           last_name=last_name, email=email)
+    return render_template('profile.html', email=display_email)
 
 
-@blob_api.route('/reset_password/', methods=['GET', 'POST'])
-def reset_password():
-    if request.method == 'POST':
-        # send email when the form is submitted
-        email = request.form.get("email", None)
-        if Configuration.users.find_one({"email": email}) is None:
-            flash("Incorrect email")
-            return redirect(request.url)
-
-        current_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-        current_app.config['MAIL_PORT'] = 465
-        current_app.config['MAIL_USERNAME'] = 'psknow.pandora@gmail.com'
-        current_app.config['MAIL_PASSWORD'] = 'Pandora1!'
-        current_app.config['MAIL_USE_TLS'] = False
-        current_app.config['MAIL_USE_SSL'] = True
-        mail = Mail(current_app)
-        msg = Message(
-            "Password reset",
-            sender=("PSKnow", "psknow.pandora@gmail.com"),
-            recipients=[email]
-        )
-
-        random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase +
-                                                             string.digits) for _ in range(10))
-        msg.body = "Please use the code " + random_string + " to reset your password. "
-        msg.body = msg.body + "If you did not request your password to be reset, ignore this message."
-        mail.send(msg)
-        Configuration.users.update({"email": email}, {"$set": {"recovery_password": enc_bcrypt(random_string)}})
-        flash("Successfully sent! Please check your email account for a message with a confirmation code "
-              "you can use to reset your password.", 'success')
-        return redirect(url_for("blob_api.login"))
-
-    # show the form, it wasn't submitted
-    return render_template('reset_password.html')
+# @blob_api.route('/reset_password/', methods=['GET', 'POST'])
+# def reset_password():
+#     if request.method == 'POST':
+#         # send email when the form is submitted
+#         email = request.form.get("email", None)
+#         if Configuration.users.find_one({"email": email}) is None:
+#             flash("Incorrect email")
+#             return redirect(request.url)
+#
+#         current_app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+#         current_app.config['MAIL_PORT'] = 465
+#         current_app.config['MAIL_USERNAME'] = ''
+#         current_app.config['MAIL_PASSWORD'] = ''
+#         current_app.config['MAIL_USE_TLS'] = False
+#         current_app.config['MAIL_USE_SSL'] = True
+#         mail = Mail(current_app)
+#         msg = Message(
+#             "Password reset",
+#             sender=("PSKnow", "psknow.pandora@gmail.com"),
+#             recipients=[email]
+#         )
+#
+#         random_string = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase +
+#                                                              string.digits) for _ in range(10))
+#         msg.body = "Please use the code " + random_string + " to reset your password. "
+#         msg.body = msg.body + "If you did not request your password to be reset, ignore this message."
+#         mail.send(msg)
+#         Configuration.users.update({"email": email}, {"$set": {"recovery_password": hash_bcrypt(random_string)}})
+#         flash("Successfully sent! Please check your email account for a message with a confirmation code "
+#               "you can use to reset your password.", 'success')
+#         return redirect(url_for("blob_api.login"))
+#
+#     # show the form, it wasn't submitted
+#     return render_template('reset_password.html')

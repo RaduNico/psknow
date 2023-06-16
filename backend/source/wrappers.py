@@ -1,5 +1,6 @@
 import sys
 import inspect
+import traceback
 
 from .config import Configuration
 
@@ -19,8 +20,10 @@ def check_db_conn():
 
 def die(condition, message):
     if condition:
-        Configuration.logger.critical("line %s in function %s, error %s" %
-                                      (inspect.currentframe().f_back.f_lineno, inspect.stack()[1][3], message))
+        stack = "".join(traceback.format_stack(limit=3))
+        Configuration.logger.critical("line %s in function %s, error %s. Trace: %s" %
+                                      (inspect.currentframe().f_back.f_lineno, inspect.stack()[1][3],
+                                       message, stack))
         sys.exit(-1)
 
 

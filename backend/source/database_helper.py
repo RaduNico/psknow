@@ -1,3 +1,5 @@
+import traceback
+
 from .config import Configuration
 from flask import flash
 
@@ -21,15 +23,15 @@ def add_user_to_entry_id(user, entry_id):
 def update_hs_id(handshake_id, set_query):
     error = False
     try:
-        upd = Configuration.wifis.update({"id": handshake_id}, {"$set": set_query})
-        if not upd["updatedExisting"]:
-            Configuration.logger.error("db.wifis: Failed to update document with id = '%s' with message '%s'" %
-                                       (handshake_id, upd))
+        upd = Configuration.wifis.update_one({"id": handshake_id}, {"$set": set_query})
+        if not upd.matched_count > 0:
+            Configuration.logger.error("db.wifis: Failed to update document with id = '%s'" %
+                                       handshake_id)
             error = True
         Configuration.logger.info("db.wifis: Updated handshake id '%s', with $set data %s" % (handshake_id, set_query))
     except Exception as e:
-        Configuration.logger.error("db.wifis: Failed to update document with id = '%s' with error '%s'" %
-                                   (handshake_id, e))
+        Configuration.logger.error("db.wifis: Failed to update document with id = '%s' with error '%s'\n%s" %
+                                   (handshake_id, e, traceback.format_exc()))
         error = True
     return error
 

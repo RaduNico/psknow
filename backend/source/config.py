@@ -15,7 +15,7 @@ class Configuration(object):
     static_folder = "static"
 
     # Dependencies
-    crit_deps = ["hcxpcaptool", "hashcat", "aircrack-ng"]
+    crit_deps = ["hcxpcapngtool", "hashcat", "aircrack-ng"]
 
     # Database Variables
     database_location = '127.0.0.1:27017'
@@ -73,19 +73,18 @@ class Configuration(object):
     save_file_location = 'handshakes'
 
     # Handshake verification
-    pmkid_16800_regex = re.compile("^[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)[\n]?$")
     username_regex = re.compile("^[a-zA-Z][-_.0-9a-zA-Z]*$")
     hashcat_left_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*](.*)[\n]?$")
-    # aircrack_regex = re.compile("^ {0,3}[0-9]{0,3} {2}([0-9A-Fa-f:]{17}) {2}(.*) {2}"
-    #                             "(None \\([0-9]*\\.[0-9]*\\.[0-9]*\\.[0-9]*\\)|"
-    #                             "No data - WEP or WPA|"
-    #                             "WEP \\([0-9]* IVs\\)|"
-    #                             "WPA \\([0-9*] handshake.*\\)|"
-    #                             "Unknown)[\n]?$")
 
-    regex_pmkid = re.compile("WPA\\*01\\*[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)(\\*+)[\n]?$")
-    regex_handshake = re.compile("WPA\\*02\\*[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)\\*[0-9a-f]{64}"
-                                 "\\*[0-9a-f]*\\*[0-9a-f]{2}[\n]?$")
+    # Format for 22000 file is: PROTOCOL*TYPE*PMKID/MIC*MACAP*MACCLIENT*ESSID*ANONCE*EAPOL*MESSAGEPAIR
+    #                         PROT TYPE      PMKID/MIC      MAC_AP           MAC_CLIENT     ESSID
+    #                           ANONCE           EAPOL       MESSAGE_PAIR
+    # Group 1 value - 1=PMKID, 2=4-way handshake
+    # Group 2 value - MAC AP
+    # Group 3 value - ESSID
+    # Group 4 value - Handshak type (see hcxpcapngtool bitmasks)
+    regex_22000 = re.compile("WPA\\*0([12])\\*[0-9a-f]{32}\\*([0-9a-f]{12})\\*[0-9a-f]{12}\\*([0-9a-f]*)"
+                             "\\*[0-9a-f]{0,64}\\*[0-9a-f]*\\*([0-9a-f]{0,2})[\n]?$")
     empty_pot_path = 'config_files/empty_potfile'
 
     # Accepted upload extensions

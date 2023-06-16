@@ -85,15 +85,9 @@ class Cracker:
     @staticmethod
     def get_attack_command(rule, attack_type, filename, ssid):
         generator = ""
-        attack_command = "hashcat -w %d --potfile-path=%s" % \
+        attack_command = "hashcat -w %d --potfile-path=%s -m 22000" % \
                          (Cracker.crt_workload, Configuration.hashcat_potfile_path)
         scrambler = None
-
-        # Append hash identification based on attack type
-        if attack_type == "PMKID" or attack_type == "WPA":
-            attack_command += " -m 22000"
-        else:
-            die(True, "Unsupported attack type %s" % attack_type)
 
         # Translate rule type to command
         if rule["type"] == "generated":
@@ -112,7 +106,7 @@ class Cracker:
             pass
 
         else:
-            die(True, "Rules error! Unknows rule type %s" % rule["type"])
+            die(True, "Rule error, unknown rule type '%s'" % rule["type"])
 
         attack_command += " " + filename
 

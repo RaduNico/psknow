@@ -21,14 +21,14 @@ from flask_login import login_required, current_user
 key_template = {
     "user": "",
     "date_generated": "",
-    "key_id": 0,
+    "key_id": "",
     "name": ""
 }
 
 api_api = Blueprint('api_api', __name__)
 
 
-# Decorator that determines if a user is allowd to use the API
+# Decorator that determines if a user is allowed to use the API
 def allowed_api(f):
     @wraps(f)
     def allowed_api_fct(*args, **kwargs):
@@ -70,9 +70,9 @@ def require_key(f):
             return jsonify({"success": False, "reason": "Invalid API key!"})
 
         try:
-            user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})  # TODO make a try except
+            user_entry = Configuration.users.find_one({"username": decoded_api_key["user"]})
         except Exception as e:
-            Configuration.logger.error("Error occured while retrieving username from database: %s" % e)
+            Configuration.logger.error("Error occurred while retrieving username from database: %s" % e)
             return None, "Internal server error 101"
 
         if user_entry is None:
@@ -138,12 +138,12 @@ def exception_catcher(f):
 
 # Helper funtion that returns a dictionary from a utf-8 encoded jwt
 def jwt_decode(token, api_key):
-    return jwt.decode(token.encode("utf-8"), api_key)
+    return jwt.decode(token, api_key, algorithms=['HS512'])
 
 
 # Helper funtion that create a jwt token from a dictionary then encodes it in utf8
 def jwt_encode(dic, api_key):
-    return jwt.encode(dic, api_key, algorithm='HS512').decode("utf-8")
+    return jwt.encode(dic, api_key, algorithm='HS512')
 
 
 @api_api.route('/api/', methods=['GET'])
@@ -264,6 +264,7 @@ def getwork_v1(**kwargs):
             return jsonify({"success": False, "reason": "Capabilities updated!"})
 
     work, error = Scheduler.get_next_handshake(kwargs["apikey"], client_capabilities)
+
     if error != "":
         return jsonify({"success": False, "reason": error})
 
@@ -277,7 +278,7 @@ def file_ok(filename, apikey):
 
     if filename is None or filename == "" or filename not in Configuration.cap_dict:
         if filename not in Configuration.cap_dict:
-            Configuration.logger.warning("Api key '%s' requested illegal file" % filename)
+            Configuration.logger.warning("Api key '%s' requested illegal file" % apikey)
         return False
 
     return True
@@ -421,22 +422,28 @@ def sendeta_v1(**kwargs):
     return jsonify({"success": True})
 
 
-def is_password(password, db_entry):
+def is_wifi_password(password, db_entry):
+    """
+        Helper function which returns if the value in the password entry is the correct one of the db_entry
+    :param password: A potential password for a handshake/PMKID
+    :param db_entry: A wifi database entry. Contains all information about a single wifi in the database.
+    :return: Pair of (bool, str). The boolean parameter returns whether the password is correct for a database entry
+        and the str returns a reason, if it is not a valid password.
+    """
     _, password_temp_file = tempfile.mkstemp(prefix="psknow_backend")
-    _, hcx_temp_file = tempfile.mkstemp(prefix="psknow_backend")
-
-    with open(password_temp_file, "w") as fd:
-        fd.write(password)
 
     try:
-        Configuration.logger.info("%s" % db_entry)
-        capture = Scheduler.get_22000_data(db_entry)
+        Configuration.logger.info("Database entry, '%s' function, api.py %s" % (is_wifi_password.__name__, db_entry))
+        capture = Scheduler.generate_22000_from_wifi_db_entry(db_entry)
         if capture.startswith("WPA"):
             capture = capture[7:-3]
 
         if capture == "":
             Configuration.logger.error("Could not match database MAC to 16800/22000 file to retrieve PMKID/handshake")
             return False, "Failed to retrieve PMKID/handshake from file to password check."
+
+        with open(password_temp_file, "w") as fd:
+            fd.write(password)
 
         wifi_hash = "-I %s" % capture
         command = 'aircrack-ng %s -w %s --bssid %s' % (wifi_hash, password_temp_file, db_entry["handshake"]["MAC"])
@@ -459,7 +466,6 @@ def is_password(password, db_entry):
         return False, "Unexpected exception in password checking."
     finally:
         os.remove(password_temp_file)
-        os.remove(hcx_temp_file)
 
 
 # Decorator that checks the validity of a API key sent
@@ -500,7 +506,7 @@ def sendresult_v1(**kwargs):
         return jsonify({"success": False, "reason": "Invalid password length."})
 
     wifi_entry = kwargs["job"]
-    is_pass, error = is_password(password, wifi_entry)
+    is_pass, error = is_wifi_password(password, wifi_entry)
     if not is_pass:
         return jsonify({"success": False, "reason": error})
 
