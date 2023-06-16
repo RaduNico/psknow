@@ -118,6 +118,7 @@ def retire_handshake(internal_id, document=None):
 
 
 # TODO if appending WPA/PMKID from another user use the current upload time
+# TODO replace if PMKID (done) or if M3 is present
 def treat_duplicate(wifi_entry):
     ssid = wifi_entry["handshake"]["SSID"]
     mac = wifi_entry["handshake"]["MAC"]
@@ -205,7 +206,6 @@ def treat_duplicate(wifi_entry):
     return duplicate_flag, False
 
 
-# TODO change this to proper file type check - use file or directly detect magic numbers
 def check_handshake(file_path, filename, wifi_entry):
     """
         Function that checks if a file located at the path file_path contains any valid handshakes
@@ -221,6 +221,7 @@ def check_handshake(file_path, filename, wifi_entry):
     # Sanity check (file should always exist)
     die(not os.path.isfile(file_path), "File %s does not exist!" % file_path)
 
+    # TODO change this to proper file type check - use file or directly detect magic numbers
     # We add to wifi_entry: file_type, handshake[SSID, MAC, open, handshake_type]
     if not filename.endswith((".cap", ".pcap", ".pcapng", ".16800", ".22000")):
         Configuration.logger.info("Cannot process file type for the file '%s'" % filename)
@@ -278,35 +279,35 @@ def check_handshake(file_path, filename, wifi_entry):
             if flag:
                 continue
 
-            handshake = deepcopy(Configuration.default_handshake)
-            handshake["MAC"] = mac
-            handshake["SSID"] = ssid
-            handshake["handshake_type"] = hs_type
+            new_handshake = deepcopy(Configuration.default_handshake)
+            new_handshake["MAC"] = mac
+            new_handshake["SSID"] = ssid
+            new_handshake["handshake_type"] = hs_type
 
             # Avoid duplicate 'duplicate message' for files with both PMKID and handshakes
-            if (handshake["MAC"], handshake["SSID"]) in duplicate_pair:
+            if (new_handshake["MAC"], new_handshake["SSID"]) in duplicate_pair:
                 continue
 
-            tmp_wifi = deepcopy(wifi_entry)
+            new_wifi_entry = deepcopy(wifi_entry)
 
             # Generate unique ID for our document
-            tmp_wifi["id"] = get_unique_id()
-            tmp_wifi["handshake"] = handshake
+            new_wifi_entry["id"] = get_unique_id()
+            new_wifi_entry["handshake"] = new_handshake
 
-            is_duplicate, error = treat_duplicate(tmp_wifi)
+            is_duplicate, error = treat_duplicate(new_wifi_entry)
 
             if error:
                 return False, None
 
             if is_duplicate:
-                duplicate_pair.add((handshake["MAC"], handshake["SSID"]))
+                duplicate_pair.add((new_handshake["MAC"], new_handshake["SSID"]))
                 duplicate_flag = True
                 continue
 
-            entries.append(tmp_wifi)
+            entries.append(new_wifi_entry)
 
         if len(entries) == 0:
-            # If the duplicate_flag is True it means at least a hash has been found (despite being useless)
+            # If the duplicate_flag is True it means at least a hash has been found (even if useless)
             if not duplicate_flag:
                 Configuration.logger.info("No valid handshake found in file '%s'" % filename)
                 flash("No valid handshake found in file '%s'" % filename)

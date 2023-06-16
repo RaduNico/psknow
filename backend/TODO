@@ -1,19 +1,16 @@
 Backend:
 
 !!! HIGH Prio
- * Completely rewrite how all/ uploaded handshakes are handled. They should be handled in the same way by the following components:
-    - check password function
-    - initial upload check
-    - scheduler function which sends work to clients
  * Properly list dependecies
 
 ! Low Prio
  * Add option as to only allow EAPOL which contain an authenticated M3
- * Eliminate aircrack as a dependency. Use "manual" python to check key
+ * Eliminate aircrack as a dependency. Use hcxtools to check key
 
 . Nice to have
  * Maybe create a separate class for file conversions. Handle files better
  * Determine if multiple handshakes/PMKIDs are present which one is chosen.
+ * Test non-printable SSID
 
 For the cracker:
 * Work should only be received as 22000 file format. This should simplify the logic by a lot

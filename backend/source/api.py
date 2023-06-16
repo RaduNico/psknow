@@ -21,7 +21,7 @@ from flask_login import login_required, current_user
 key_template = {
     "user": "",
     "date_generated": "",
-    "key_id": 0,
+    "key_id": "",
     "name": ""
 }
 
@@ -138,12 +138,12 @@ def exception_catcher(f):
 
 # Helper funtion that returns a dictionary from a utf-8 encoded jwt
 def jwt_decode(token, api_key):
-    return jwt.decode(token.encode("utf-8"), api_key)
+    return jwt.decode(token, api_key, algorithms=['HS512'])
 
 
 # Helper funtion that create a jwt token from a dictionary then encodes it in utf8
 def jwt_encode(dic, api_key):
-    return jwt.encode(dic, api_key, algorithm='HS512').decode("utf-8")
+    return jwt.encode(dic, api_key, algorithm='HS512')
 
 
 @api_api.route('/api/', methods=['GET'])
@@ -264,6 +264,7 @@ def getwork_v1(**kwargs):
             return jsonify({"success": False, "reason": "Capabilities updated!"})
 
     work, error = Scheduler.get_next_handshake(kwargs["apikey"], client_capabilities)
+
     if error != "":
         return jsonify({"success": False, "reason": error})
 
