@@ -1,77 +1,15 @@
 import os
 import datetime
-import tempfile
 
 from .process import Process
 from .database_helper import generic_find, update_hs_id
 from .config import Configuration
 
-from bson.code import Code
 from tempfile import mkstemp
 from copy import deepcopy
 
 
 class Scheduler:
-    # prios = [{rule_name: rule_prio}] - priorities only for possible rules
-    # crt = [{tried_rule_name: 1}] - all tried rules for current hs
-    mapper_template = "function() {" \
-                      " var prios = %s;" \
-                      " var result_name = '';" \
-                      " var result_prio = 900000;" \
-                      " var crt = {};" \
-                      " for (var iter in this['handshake']['tried_dicts']) {" \
-                      " 	crt[this['handshake']['tried_dicts'][iter]] = 1;" \
-                      " }" \
-                      " for (var name in prios) {" \
-                      " 	if ( crt[name] !== 1 && prios[name] < result_prio) {" \
-                      " 		result_name = name;" \
-                      " 		result_prio = prios[name];" \
-                      " 	}" \
-                      " }" \
-                      " var result = {};" \
-                      " result['date_added'] = this['date_added'];" \
-                      " result['priority'] = this['priority'];" \
-                      " result['id'] = this['id'];" \
-                      " result['path'] = this['path'];" \
-                      " result['file_type'] = this['file_type'];" \
-                      " result['id'] = this['id'];" \
-                      " result['mac'] = this['handshake']['MAC'];" \
-                      " result['ssid'] = this['handshake']['SSID'];" \
-                      " result['next_rule'] = result_name;" \
-                      " result['rule_prio'] = result_prio;" \
-                      " result['handshake_type'] = this['handshake']['handshake_type'];" \
-                      " emit(0, result)" \
-                      "}"
-
-    reducerf = Code("function (rule_prio, documents) {"
-                    "	var good_document = documents[0];"
-                    "	var best_user_prio = documents[0]['priority'];"
-                    "	var best_date = documents[0]['date_added'];"
-                    "	var best_rule_prio = documents[0]['rule_prio'];"
-                    "	"
-                    "	for (var i = 1; i < documents.length; i++) {"
-                    "		if (documents[i]['priority'] < best_user_prio) {"
-                    "			good_document = documents[i];"
-                    "			"
-                    "			best_user_prio = documents[i]['priority'];"
-                    "			best_rule_prio = documents[i]['rule_prio'];"
-                    "			best_date = documents[i]['date_added'];"
-                    "		} else if (documents[i]['priority'] === best_user_prio &&"
-                    "					documents[i]['rule_prio'] < best_rule_prio) {"
-                    "			good_document = documents[i];"
-                    "			"
-                    "			best_rule_prio = documents[i]['rule_prio'];"
-                    "			best_date = documents[i]['date_added'];"
-                    "		} else if (documents[i]['priority'] === best_user_prio &&"
-                    "					documents[i]['rule_prio'] === best_rule_prio &&"
-                    "					documents[i]['date_added'] < best_date) {"
-                    "			good_document = documents[i];"
-                    "			best_date = documents[i]['date_added'];"
-                    "		}"
-                    "	}"
-                    "	return good_document;"
-                    "}")
-
     default_task = {
         "handshake": {
             "data": "",
@@ -267,9 +205,6 @@ class Scheduler:
 
         # Lock this in order to ensure that multiple threads do not reserve the same handshake
         with Configuration.wifis_lock:
-            query = {"handshake.open": False, "reserved": None, "handshake.password": "",
-                     "handshake.tried_dicts.%s" % (Configuration.number_rules - 1): {"$exists": False}}
-            mapper = Code(Scheduler.mapper_template % Scheduler.get_all_possible_rules(client_capabilities))
             try:
                 response = Configuration.wifis.aggregate(pipeline_min_prio_min_rule)
             except Exception as e:
