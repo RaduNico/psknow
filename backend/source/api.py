@@ -165,6 +165,7 @@ def main_api():
             entry["key"] = key
 
             # The jwt comes from the database, no need to check for validity
+            # TODO Check for validity. If the secret key has changed all old API keys need to be invalidated
             values = jwt_decode(entry["key"], Configuration.api_secret_key)
             entry["name"] = values["name"]
             entry["date_generated"] = datetime.datetime.strptime(values["date_generated"], '%Y-%m-%dT%H:%M:%S.%f') \
