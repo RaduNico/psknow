@@ -25,7 +25,7 @@ class Configuration(object):
     # TODO move this in a private file
     login_with_credentials = False
     db_username = 'psknow'
-    db_password = 'xY6R0YPFBpjebMwFHBYXQTokZ25nI1G8eZfjWqQrUtUeajcucgKpNxncVBCW'
+    db_password = ""
 
     conn = None
     db = None
@@ -210,6 +210,17 @@ class Configuration(object):
     @staticmethod
     def get_connection():
         if Configuration.login_with_credentials:
+            try:
+                with open("keys/mongodb_pass.txt", "r") as fd:
+                    Configuration.db_password = "".join("".join(fd.readlines()).split())
+            except FileNotFoundError as e:
+                Configuration.logger.error("Mongodb password does not exist")
+                return None
+
+            if len(Configuration.db_password) == 0:
+                Configuration.logger.error("Mongodb password found, but no password is present")
+                return None
+
             conn_loc = "mongodb://%s:%s@%s/%s" % \
                        (Configuration.db_username, Configuration.db_password,
                         Configuration.database_location, Configuration.database_name)
