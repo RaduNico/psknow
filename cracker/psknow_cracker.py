@@ -254,8 +254,13 @@ class Cracker:
 
         msg = "\033[91m[FAIL]\033[0m Password for '%s' is not contained in rule '%s'\n" %\
               (Cracker.mac_ssid_job, Cracker.crt_rule["name"])
+        Comunicator.info_logger("Finished rule %s on '%s'" %
+                                (Cracker.crt_rule["name"], Cracker.mac_ssid_job))
         if len(password) > 7:
             msg = "\033[92m[SUCCESS]\033[0m The password for '%s' is '%s'\n" % (Cracker.mac_ssid_job, password)
+            Comunicator.info_logger("SUCCESS! The rule %s on '%s' contained the password %s" %
+                                    (Cracker.crt_rule["name"], Cracker.mac_ssid_job, password))
+
 
         Comunicator.printer(msg)
         Cracker.safe_send_result(password)
