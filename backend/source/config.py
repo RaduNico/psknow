@@ -15,7 +15,7 @@ class Configuration(object):
     static_folder = "static"
 
     # Dependencies
-    crit_deps = ["hcxpcapngtool", "hashcat", "aircrack-ng"]
+    crit_deps = ["hcxpcapngtool", "hashcat", "hcxpmktool"]
 
     # Database Variables
     database_location = '127.0.0.1:27017'

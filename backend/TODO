@@ -5,7 +5,6 @@ Backend:
 
 ! Low Prio
  * Add option as to only allow EAPOL which contain an authenticated M3
- * Eliminate aircrack as a dependency. Use hcxtools to check key
 
 . Nice to have
  * Maybe create a separate class for file conversions. Handle files better

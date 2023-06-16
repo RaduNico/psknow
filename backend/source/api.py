@@ -431,42 +431,37 @@ def is_wifi_password(password, db_entry):
     :return: Pair of (bool, str). The boolean parameter returns whether the password is correct for a database entry
         and the str returns a reason, if it is not a valid password.
     """
-    _, password_temp_file = tempfile.mkstemp(prefix="psknow_backend")
 
     try:
         Configuration.logger.info("Database entry, '%s' function, api.py %s" % (is_wifi_password.__name__, db_entry))
         capture = Scheduler.generate_22000_from_wifi_db_entry(db_entry)
-        if capture.startswith("WPA"):
-            capture = capture[7:-3]
 
         if capture == "":
-            Configuration.logger.error("Could not match database MAC to 16800/22000 file to retrieve PMKID/handshake")
-            return False, "Failed to retrieve PMKID/handshake from file to password check."
+            Configuration.logger.error("Failed to generate 22000 hash for password checking. Entry %s" % db_entry)
+            return False, "Failed to generate 22000 hash for password checking."
 
-        with open(password_temp_file, "w") as fd:
-            fd.write(password)
-
-        wifi_hash = "-I %s" % capture
-        command = 'aircrack-ng %s -w %s --bssid %s' % (wifi_hash, password_temp_file, db_entry["handshake"]["MAC"])
+        command = 'hcxpmktool -l %s -p %s' % (capture, password)
 
         process = Process(command)
-        output = process.stdout()
+        process.wait()
+        status_code = process.poll()
 
-        if process.poll() != 0:
-            Configuration.logger.error("Aircrack crashed with error '%s'" % process.stderr())
-            return False, "Aircrack crashed unexpectedly."
-
-        if "KEY FOUND!" in output:
+        if status_code == 0:
             return True, ""
+        elif status_code == 1:
+            Configuration.logger.error("hcxpmktool crashed with error '%s'" % process.stderr())
+            return False, "hcxpmktool crashed with an error"
+        elif status_code == 2:
+            Configuration.logger.warning("Provided password '%s' does not match!" % password)
+            return False, "Password does not match!"
+        else:
+            Configuration.logger.warning("Unknown error occured with code %s" % status_code)
+            return False, "Unknonw error occured"
 
-        Configuration.logger.warning("Provided password '%s' does not match!" % password)
-        return False, "Password does not match!"
 
     except Exception as e:
         Configuration.logger.error("Exception raised while checking password: '%s'" % e)
         return False, "Unexpected exception in password checking."
-    finally:
-        os.remove(password_temp_file)
 
 
 # Decorator that checks the validity of a API key sent
