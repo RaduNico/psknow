@@ -22,7 +22,6 @@ class Configuration(object):
     admin_account = "pandora"
     database_name = "psknow"
 
-    # TODO move this in a private file
     login_with_credentials = False
     db_username = 'psknow'
     db_password = ""
