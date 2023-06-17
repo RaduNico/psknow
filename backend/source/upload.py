@@ -1,5 +1,4 @@
 import datetime
-import tempfile
 import os
 import string
 import random
@@ -9,6 +8,7 @@ from .config import Configuration
 from .wrappers import die, not_admin, check_db_conn
 from .database_helper import add_user_to_entry_id, generic_find, lookup_by_id
 
+from tempfile import NamedTemporaryFile
 from werkzeug.utils import secure_filename
 from flask import flash, redirect, Blueprint, request, render_template
 from flask_login import login_required, current_user
@@ -61,7 +61,9 @@ def get_22000_file(filepath, is_16800=False):
     die(not os.path.isfile(filepath), "File %s does not exist!" % filepath)
 
     # Memorize name so we can later delete it
-    _, temp_filename = tempfile.mkstemp(prefix="psknow_backend")
+    tmp_file = NamedTemporaryFile(prefix="psknow_backend_get_22000_file",
+                                  delete=False, dir=Configuration.tempfile_dir)
+    temp_filename = tmp_file.name
 
     # Conversion to .22000
     if is_16800:
@@ -354,7 +356,9 @@ def upload_file():
             continue
 
         # Create tmpfile with unique name
-        _, tmp_path = tempfile.mkstemp()
+        temp_file = NamedTemporaryFile(prefix="psknow_backend_upload_file",
+                                      delete=False, dir=Configuration.tempfile_dir)
+        tmp_path = temp_file.name
         file.save(tmp_path)
 
         new_entry = deepcopy(Configuration.default_wifi)

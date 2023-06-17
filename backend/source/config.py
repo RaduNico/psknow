@@ -71,6 +71,9 @@ class Configuration(object):
     # Handshake save folder
     save_file_location = 'handshakes'
 
+    # Temporary files folder
+    tempfile_dir = ".tmp_files"
+
     # Handshake verification
     username_regex = re.compile("^[a-zA-Z][-_.0-9a-zA-Z]*$")
     hashcat_left_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*](.*)[\n]?$")
@@ -399,6 +402,11 @@ class Configuration(object):
 
         # Read capabilities data
         Configuration.read_caps()
+
+        # Check if temporary files folder exists and create if it does not
+        if not os.path.isdir(Configuration.tempfile_dir):
+            Configuration.logger.debug("Creating temporary files folder '%s'" % Configuration.tempfile_dir)
+            os.makedirs(Configuration.tempfile_dir)
 
         # Check if handshake folder exists
         if not os.path.isdir(Configuration.save_file_location):

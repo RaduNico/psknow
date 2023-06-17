@@ -19,11 +19,6 @@ Other notes:
 Use hcxhashtool for filtering based on mac.
 use hcxmactool for conversion from 16800 to 22000 https://hashcat.net/forum/thread-6661-post-47555.html
 
-# tempfile.mkstemp this function might be misused, we might need to use another function
-# This funciton is used because of the assumption that the created file is available until manually deleted. Can we
-# use another function that deletes the file after references to the filename exist?
-# Other functions were not chosen because of the assumption that the created files would have been deleted if
-# the crated temp file were to be closed
 
 
 

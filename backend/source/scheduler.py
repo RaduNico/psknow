@@ -5,7 +5,7 @@ from .process import Process
 from .database_helper import generic_find, update_hs_id
 from .config import Configuration
 
-from tempfile import mkstemp
+from tempfile import NamedTemporaryFile
 from copy import deepcopy
 
 
@@ -76,7 +76,10 @@ class Scheduler:
     def _get_22000hash_from_16800_filter_mac(file, mac_addr):
         """ return 22000 hash from a .16800 file that matches the given MAC """
 
-        _, temp_22000_filename = mkstemp(prefix="psknow_backend")
+        tmp_file = NamedTemporaryFile(prefix="psknow_backend_get22000_from16800",
+                                      delete = False, dir = Configuration.tempfile_dir)
+
+        temp_22000_filename = tmp_file.name
 
         try:
             cmd = "hcxmactool --pmkidin=%s --pmkideapolout=%s" % (file, temp_22000_filename)
@@ -93,7 +96,10 @@ class Scheduler:
     @staticmethod
     def _get_22000hash_from_capture_filter_mac(file, mac_addr):
         """ return 22000 hash from a capture file that matches the given MAC """
-        _, temp_22000_filename = mkstemp(prefix="psknow_backend")
+
+        tmp_file = NamedTemporaryFile(prefix="psknow_backend_get22000_from_capture",
+                                      delete = False, dir = Configuration.tempfile_dir)
+        temp_22000_filename = tmp_file.name
 
         try:
             cmd = "hcxpcapngtool -o %s %s" % (temp_22000_filename, file)
