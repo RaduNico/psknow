@@ -193,19 +193,21 @@ class Scheduler:
             { "$replaceRoot": {"newRoot": "$docs"}},
 
             # Find document with lowest allowed rule that has not been tried
-            {
-                "$addFields":  {
-                    "lowestNotTried": {
-                        "$min": {
-                            "$map": {
-                                "input": {"$setDifference" : [list(Scheduler.get_all_possible_rules(client_capabilities).keys()),
-                                                "$handshake.tried_dicts"]},
-                                "as": "value",
-                                "in": {
-                                    "$switch": {
-                                        "branches": pipeline_branches,
-                                        "default": "$$value"
+            { "$addFields":  {
+                "lowestNotTried": {
+                    "$min": {
+                        "$map": {
+                            "input": {"$setDifference" : [list(Scheduler.get_all_possible_rules(client_capabilities).keys()),
+                                            "$handshake.tried_dicts"]},
+                            "as": "value",
+                            "in": {
+                                "$switch": {
+                                    "branches": pipeline_branches,
+                                    "default": "$$value"
             }}}}}}},
+            { "$match": {
+                "lowestNotTried": { "$ne": None }
+            }},
             { "$sort": {"lowestNotTried" : 1}},
             { "$limit": 1}]
 
@@ -231,7 +233,8 @@ class Scheduler:
                     next_rule_name = rule_name
 
             if next_rule_name is None:
-                Configuration.logger.error("Error occured mapping the lowest rule priority not tried back to rule name.")
+                Configuration.logger.error("Error occured when mapping lowest rule priority which has not been tried"
+                                           "back to rule name. Unknown rule prio %s" % best_handshake["lowestNotTried"])
                 return None, "Internal server error 102"
 
             Scheduler._reserve_handshake(best_handshake["id"], apikey, next_rule_name)
