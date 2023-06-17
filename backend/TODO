@@ -9,7 +9,6 @@ Backend:
 . Nice to have
  * Maybe create a separate class for file conversions. Handle files better
  * Determine if multiple handshakes/PMKIDs are present which one is chosen.
- * Test non-printable SSID
 
 For the cracker:
 * Properly list dependecies

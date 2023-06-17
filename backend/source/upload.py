@@ -265,8 +265,10 @@ def check_handshake(file_path, filename, wifi_entry):
             handshake_type = "PMKID" if regex_matches.group(1) == "1" else "WPA"
             mac = ":".join(a + b for a, b in zip(regex_matches.group(2)[::2], regex_matches.group(2)[1::2]))
 
-            # TODO what do if ssid is not printable? This might erorr out.
-            ssid = bytearray.fromhex(regex_matches.group(3)).decode()
+            try:
+                ssid = bytearray.fromhex(regex_matches.group(3)).decode()
+            except UnicodeDecodeError:
+                ssid = "$HEX[" + regex_matches.group(3) + "]"
 
             mac_ssid_list.append((mac, ssid, handshake_type))
 
