@@ -247,20 +247,19 @@ def check_handshake(file_path, filename, wifi_entry):
         return False, None
 
     try:
-        show_command = "hashcat --potfile-path=%s --left -m 22000 %s" % (Configuration.empty_pot_path, temp_filename)
-
-        # Test with hashcat if files contain valid data
+        lines = None
         mac_ssid_list = []
 
-        output = Process(show_command, crit=True).stdout()
-        if output is None or len(output) <= 0:
-            return False, None
+        with open(temp_filename) as fd:
+            lines = fd.readlines()
 
-        for cracked_target in output.split():
-            regex_matches = Configuration.regex_22000.match(cracked_target)
+        for line in lines:
+            line = line.split()[0]
+
+            regex_matches = Configuration.regex_22000.match(line)
 
             if regex_matches is None:
-                Configuration.logger.error("REGEX error! Could not match the left line: %s" % cracked_target)
+                Configuration.logger.warning("REGEX error! Could not match the 22000 line: %s" % line)
                 continue
 
             handshake_type = "PMKID" if regex_matches.group(1) == "1" else "WPA"

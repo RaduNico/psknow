@@ -15,7 +15,7 @@ class Configuration(object):
     static_folder = "static"
 
     # Dependencies
-    crit_deps = ["hcxpcapngtool", "hashcat", "hcxpmktool"]
+    crit_deps = ["hcxpcapngtool", "hcxpmktool"]
 
     # Database Variables
     database_location = '127.0.0.1:27017'
@@ -76,7 +76,6 @@ class Configuration(object):
 
     # Handshake verification
     username_regex = re.compile("^[a-zA-Z][-_.0-9a-zA-Z]*$")
-    hashcat_left_regex = re.compile("[0-9a-f]{32}[:*]([0-9a-f]{12})[:*][0-9a-f]{12}[:*](.*)[\n]?$")
 
     # Format for 22000 file is: PROTOCOL*TYPE*PMKID/MIC*MACAP*MACCLIENT*ESSID*ANONCE*EAPOL*MESSAGEPAIR
     #                         PROT TYPE      PMKID/MIC      MAC_AP           MAC_CLIENT     ESSID
@@ -215,7 +214,7 @@ class Configuration(object):
             try:
                 with open("keys/mongodb_pass.txt", "r") as fd:
                     Configuration.db_password = "".join("".join(fd.readlines()).split())
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 Configuration.logger.error("Mongodb password does not exist")
                 return None
 

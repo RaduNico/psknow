@@ -12,14 +12,7 @@ Backend:
  * Test non-printable SSID
 
 For the cracker:
-* Work should only be received as 22000 file format. This should simplify the logic by a lot
 * Properly list dependecies
 
 Other notes:
 Use hcxhashtool for filtering based on mac.
-use hcxmactool for conversion from 16800 to 22000 https://hashcat.net/forum/thread-6661-post-47555.html
-
-
-
-
-
