@@ -191,6 +191,7 @@ class Configuration(object):
 
         one_program = False
         for program in Configuration.programs:
+            program_name = program
             if program.endswith(".exe"):
                 program_name = program.rsplit(".", 1)[0]
 
