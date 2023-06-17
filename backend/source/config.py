@@ -22,7 +22,7 @@ class Configuration(object):
     admin_account = "pandora"
     database_name = "psknow"
 
-    login_with_credentials = False
+    login_with_credentials = True
     db_username = 'psknow'
     db_password = ""
 
