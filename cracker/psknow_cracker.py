@@ -136,7 +136,8 @@ class Cracker:
 
         Cracker.crt_process = None
 
-        if Cracker.path_temp_file is not None:
+        # TODO this crashes on windows due to being still open somehow
+        if not is_win and Cracker.path_temp_file is not None:
             os.remove(Cracker.path_temp_file.name)
         Cracker.path_temp_file = None
 
