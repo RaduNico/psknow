@@ -1,12 +1,20 @@
 import sys
-import tty
-import termios
 import logbook
 import inspect
+import platform
 
 from _thread import start_new_thread
 from collections import deque
 from threading import Lock
+
+plat = platform.system()
+is_win = False
+
+if plat == "Windows":
+    is_win = True
+else:
+    import tty
+    import termios
 
 
 def reader_thread():
@@ -92,10 +100,12 @@ class Comunicator:
 
     @staticmethod
     def initialize():
-        Comunicator.old_settings = termios.tcgetattr(sys.stdin.fileno())
         Comunicator.setup_logging()
-        Comunicator.reader_alive = True
-        start_new_thread(reader_thread, ())
+
+        if not is_win:
+            Comunicator.old_settings = termios.tcgetattr(sys.stdin.fileno())
+            Comunicator.reader_alive = True
+            start_new_thread(reader_thread, ())
 
     @staticmethod
     def stop():

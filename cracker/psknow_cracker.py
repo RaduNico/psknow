@@ -6,6 +6,7 @@ import inspect
 import signal
 import stat
 import traceback
+import platform
 
 from time import sleep
 from tempfile import NamedTemporaryFile
@@ -17,6 +18,12 @@ from scrambler import Scrambler
 from requester import Requester
 from comunicator import Comunicator
 
+
+plat = platform.system()
+is_win = False
+
+if plat == "Windows":
+    is_win = True
 
 def die(condition, message):
     if condition:
@@ -85,8 +92,8 @@ class Cracker:
     @staticmethod
     def get_attack_command(rule, filename, ssid):
         generator = ""
-        attack_command = "hashcat -w %d --potfile-path=%s -m 22000" % \
-                         (Cracker.crt_workload, Configuration.hashcat_potfile_path)
+        attack_command = "%s -w %d --potfile-path=%s -m 22000" % \
+                         (Configuration.hashcat_executable, Cracker.crt_workload, Configuration.hashcat_potfile_path)
         scrambler = None
 
         # Translate rule type to command
@@ -279,7 +286,8 @@ class Cracker:
     def start_cracking(work):
         Cracker.mac_ssid_job = "%s-%s" % (work["handshake"]["mac"], work["handshake"]["ssid"])
         msg = "Running '%s' with rule '%s'" % (Cracker.mac_ssid_job, work["rule"]["name"])
-        Comunicator.enable(interactive=False)
+        if not is_win:
+            Comunicator.enable(interactive=False)
         Comunicator.dual_printer(Comunicator.logger.info, msg)
 
 
@@ -515,7 +523,8 @@ class Cracker:
 
         try:
             # Disable terminal echo
-            os.system("stty -echo")
+            if not is_win:
+                os.system("stty -echo")
 
             last_time = None
             while True:
@@ -524,17 +533,20 @@ class Cracker:
                     last_time = now_time
                     Cracker.do_work()
 
-                cmd = Comunicator.get_command()
-                if cmd is not None:
-                    Cracker.parse_command(cmd)
+                if not is_win:
+                    cmd = Comunicator.get_command()
+                    if cmd is not None:
+                        Cracker.parse_command(cmd)
+                elif slow_stop_flag:
+                    fast_stop()
                 sleep(0.1)
         except Exception as e:
             Cracker.clean_variables()
             Comunicator.fatal_debug_printer("Caught unexpected exception: '%s' '%s'" % (e, traceback.format_exc()))
         finally:
-            # Reenable terminal echo
-            os.system("stty echo")
-            pass
+            if not is_win:
+                os.system("stty echo")
+
 
 
 if __name__ == "__main__":

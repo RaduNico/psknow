@@ -1,3 +1,4 @@
+import platform
 import sys
 import re
 import os
@@ -8,6 +9,12 @@ from tempfile import NamedTemporaryFile
 from shutil import which
 from comunicator import Comunicator
 from process import SingleProcess
+
+plat = platform.system()
+is_win = False
+
+if plat == "Windows":
+    is_win = True
 
 
 class Configuration(object):
@@ -24,12 +31,17 @@ class Configuration(object):
     remote_server = None
 
     capabilities = dict()
-    capab_dirs = ["dict", "dict/generators", "dict/maskfiles"]
-    programs = ["hashcat", "john"]
+    capab_dirs = ["dict", os.path.join("dict", "generators"), os.path.join("dict", "maskfiles")]
+    if is_win:
+        hashcat_executable = "hashcat.exe"
+        programs = [hashcat_executable, "john.exe"]
+    else:
+        hashcat_executable = "hashcat"
+        programs = [hashcat_executable, "john"]
 
     old_sha1s = None
-    sha1s_filename = "crack/sha1s.txt"
-    save_result_filename = "crack/saveresult.txt"
+    sha1s_filename = os.path.join("crack", "sha1s.txt")
+    save_result_filename = os.path.join("crack", "saveresult.txt")
 
     # Cracking paths
     attack_path = 'crack'
