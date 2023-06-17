@@ -375,7 +375,7 @@ class Cracker:
         except Cracker.req.ServerDown:
             return
 
-        die(missings is True, "Server side error occurred.")
+        die(missings is True, "Server side error occurred when getting missing requirements.")
 
         if missings is None:
             return

@@ -191,14 +191,17 @@ class Configuration(object):
 
         one_program = False
         for program in Configuration.programs:
+            if program.endswith(".exe"):
+                program_name = program.rsplit(".", 1)[0]
+
             # John path needs to be hardcoded it seems
             # Only the key is relevant for hashcat/john - we mark them with True
-            if program == "john":
+            if program == "john" or program == "john.exe":
                 if Configuration.john_path is not None:
                     if not os.path.exists(Configuration.john_path):
                         Comunicator.fatal_debug_printer("Supplied john path '%s' is invalid. Check config file!" %
                                                         Configuration.john_path)
-                    Configuration.capabilities[program] = True
+                    Configuration.capabilities[program_name] = True
                     one_program = True
                 else:
                     Comunicator.printer(
@@ -207,10 +210,10 @@ class Configuration(object):
                 continue
 
             if which(program) is not None:
-                Configuration.capabilities[program] = True
+                Configuration.capabilities[program_name] = True
                 one_program = True
             else:
-                Comunicator.printer("'%s' not installed, some rules will not run until it is installed" % program)
+                Comunicator.printer("'%s' not installed, some rules will not run until it is installed" % program_name)
 
         if not one_program:
             Comunicator.fatal_regular_message("None of the cracking programs are installed, cracking not possible!")
