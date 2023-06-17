@@ -245,7 +245,6 @@ class Scheduler:
         task["handshake"]["ssid"] = best_handshake["handshake"]["SSID"]
         task["handshake"]["mac"] = best_handshake["handshake"]["MAC"]
         task["handshake"]["file_type"] = best_handshake["file_type"]
-        task["handshake"]["handshake_type"] = best_handshake["handshake"]["handshake_type"]
 
         next_rule = Configuration.rule_dict[next_rule_name]
         task["rule"]["wordsize"] = next_rule["wordsize"]

@@ -83,7 +83,7 @@ class Cracker:
     req = None
 
     @staticmethod
-    def get_attack_command(rule, attack_type, filename, ssid):
+    def get_attack_command(rule, filename, ssid):
         generator = ""
         attack_command = "hashcat -w %d --potfile-path=%s -m 22000" % \
                          (Cracker.crt_workload, Configuration.hashcat_potfile_path)
@@ -290,14 +290,13 @@ class Cracker:
             fd.write(work["handshake"]["data"])
 
         # Memorize attack type - we need it to decode the output
-        attack_type = work["handshake"]["handshake_type"]
         Cracker.crt_rule = work["rule"]
 
         attacked_filename = Cracker.path_temp_file.name
 
         # Get commands needed to run hashcat
         generator_command, Cracker.attack_command, Cracker.scrambler =\
-            Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_filename, work["handshake"]["ssid"])
+            Cracker.get_attack_command(Cracker.crt_rule, attacked_filename, work["handshake"]["ssid"])
 
         Comunicator.info_logger("Trying rule %s on '%s-%s'" %
                                 (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))
