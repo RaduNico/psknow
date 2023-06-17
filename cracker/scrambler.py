@@ -1,16 +1,17 @@
 import re
 import os
-from tempfile import mkstemp
+from tempfile import NamedTemporaryFile
 from config import Configuration
 
 
 class Scrambler:
     def __init__(self, ssid: str):
         self.ssid = ssid
-        self.temp_filename = None
+        self.temp_filename = ""
+        self.temp_file = None
 
     def __del__(self):
-        if self.temp_filename is not None:
+        if self.temp_file is not None:
             os.remove(self.temp_filename)
 
     @staticmethod
@@ -64,9 +65,11 @@ class Scrambler:
 
         return result
 
-    def get_high_value_tempfile(self):
-        _, self.temp_filename = mkstemp(prefix="psknow_cracker")
+    def get_high_value_temp_filename(self):
+        self.temp_file = NamedTemporaryFile(delete=False, prefix="psknow_crack_get_high_value_tempfile",
+                                            dir=Configuration.tempfile_dir)
 
+        self.temp_filename = self.temp_file.name
         handler = open(self.temp_filename, "w")
 
         for entry in self._ssid_to_passwords():

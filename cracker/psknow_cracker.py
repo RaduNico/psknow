@@ -8,7 +8,7 @@ import stat
 import traceback
 
 from time import sleep
-from tempfile import mkstemp
+from tempfile import NamedTemporaryFile
 from datetime import datetime
 
 from config import Configuration
@@ -100,7 +100,7 @@ class Cracker:
         elif rule["type"] == "scrambler":
             scrambler = Scrambler(ssid)
             generator = "%s --min-length=8 --wordlist=%s --rules=Jumbo --stdout" %\
-                        (Configuration.john_path, scrambler.get_high_value_tempfile())
+                        (Configuration.john_path, scrambler.get_high_value_temp_filename())
 
         elif rule["type"] == "wordlist" or rule["type"] == "mask_hashcat" or rule["type"] == "filemask_hashcat":
             pass
@@ -127,11 +127,11 @@ class Cracker:
         Cracker.crt_process = None
 
         if Cracker.path_temp_file is not None:
-            os.remove(Cracker.path_temp_file)
+            os.remove(Cracker.path_temp_file.name)
         Cracker.path_temp_file = None
 
         Cracker.attack_command = None
-        Cracker.scrambler = None  # Deletes the tempfile
+        Cracker.scrambler = None  # Deletes the created Scrambler class and its tempfiles
         Cracker.eta_dict = None
         Cracker.crt_rule = None
         Cracker.mac_ssid_job = ""
@@ -282,20 +282,22 @@ class Cracker:
         Comunicator.enable(interactive=False)
         Comunicator.dual_printer(Comunicator.logger.info, msg)
 
-        _, Cracker.path_temp_file = mkstemp(prefix="psknow_crack")
 
-        with open(Cracker.path_temp_file, "w") as fd:
+        Cracker.path_temp_file = NamedTemporaryFile(delete=False, prefix="psknow_crack_start_cracking",
+                                                    dir=Configuration.tempfile_dir)
+
+        with open(Cracker.path_temp_file.name, "w") as fd:
             fd.write(work["handshake"]["data"])
 
         # Memorize attack type - we need it to decode the output
         attack_type = work["handshake"]["handshake_type"]
         Cracker.crt_rule = work["rule"]
 
-        attacked_file = Cracker.path_temp_file
+        attacked_filename = Cracker.path_temp_file.name
 
         # Get commands needed to run hashcat
         generator_command, Cracker.attack_command, Cracker.scrambler =\
-            Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_file, work["handshake"]["ssid"])
+            Cracker.get_attack_command(Cracker.crt_rule, attack_type, attacked_filename, work["handshake"]["ssid"])
 
         Comunicator.info_logger("Trying rule %s on '%s-%s'" %
                                 (Cracker.crt_rule["name"], work["handshake"]["mac"], work["handshake"]["ssid"]))

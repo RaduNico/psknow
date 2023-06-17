@@ -4,7 +4,7 @@ import os
 import hashlib
 import json
 
-from tempfile import mkstemp
+from tempfile import NamedTemporaryFile
 from shutil import which
 from comunicator import Comunicator
 from process import SingleProcess
@@ -15,6 +15,7 @@ class Configuration(object):
     john_path = None
 
     config_file = "cracker.conf"
+    tempfile_dir = ".tmp_files"
     empty_config = {
         "john_path": "",
         "apikey": ""}
@@ -82,13 +83,15 @@ class Configuration(object):
             "<ERROR>" otherwise
         """
         # Test if regular john the ripper works
-        _, passwd_file = mkstemp(prefix="psknow_crack")
+        passwd_file = NamedTemporaryFile(delete=False, prefix="psknow_crack_test_john",
+                                         dir=Configuration.tempfile_dir)
+        passwd_filename = passwd_file.name
 
         try:
-            with open(passwd_file, "w") as fd:
+            with open(passwd_filename, "w") as fd:
                 fd.write("password\n")
 
-            test_john_runs = "%s --wordlist=%s --stdout --rules=None" % (Configuration.john_path, passwd_file)
+            test_john_runs = "%s --wordlist=%s --stdout --rules=None" % (Configuration.john_path, passwd_filename)
             p = SingleProcess(test_john_runs, crit=False)
 
             p.generate_output()
@@ -97,7 +100,7 @@ class Configuration(object):
                 return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" % \
                        (test_john_runs, retcode, p.stdout(), p.stderr())
 
-            test_john_runs = "%s --wordlist=%s --stdout --rules=TestRulePSKnow" % (Configuration.john_path, passwd_file)
+            test_john_runs = "%s --wordlist=%s --stdout --rules=TestRulePSKnow" % (Configuration.john_path, passwd_filename)
             p = SingleProcess(test_john_runs, crit=False)
 
             p.generate_output()
@@ -109,10 +112,8 @@ class Configuration(object):
             if retcode != 0:
                 return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" % \
                        (test_john_runs, retcode, p.stdout(), p.stderr())
-        except Exception as e:
-            raise e
         finally:
-            os.remove(passwd_file)
+            os.remove(passwd_filename)
 
         return True
 
@@ -325,6 +326,9 @@ class Configuration(object):
         Configuration.load_config()
         Configuration.load_sha1s()
         Configuration.gather_capabilities()
+
+        if not os.path.exists(Configuration.tempfile_dir):
+            os.makedirs(Configuration.tempfile_dir)
 
 
 if __name__ == '__main__':

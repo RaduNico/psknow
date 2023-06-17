@@ -7,6 +7,7 @@ cracker/crack/sha1s.txt
 cracker/logs/*.log
 cracker/dict
 cracker/john-local.conf
+cracker/.tmp_files
 
 backend/config_files/capabilities_*
 !backend/config_files/capabilities_template
@@ -16,6 +17,7 @@ backend/secret_key
 backend/backendvenv
 backend/logs/*.log
 backend/handshakes/*
+backend/.tmp_files
 !backend/handshakes/.gitkeep
 
 helpers/sources/*
