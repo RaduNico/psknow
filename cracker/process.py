@@ -37,8 +37,8 @@ class NoProcess:
 
     @staticmethod
     def command_is_hashcat(command):
-        return (isinstance(command, str) and command.split(' ')[0] == "hashcat") or \
-               (isinstance(command, list) and command[0] == "hashcat")
+        return (isinstance(command, str) and command.split(' ')[0].startswith("hashcat")) or \
+               (isinstance(command, list) and command[0].startswith("hashcat"))
 
     @staticmethod
     def _close_helper(file):
