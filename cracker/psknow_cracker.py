@@ -131,8 +131,8 @@ class Cracker:
 
     @staticmethod
     def clean_variables():
-        if Cracker.crt_process is not None:
-            Cracker.crt_process.interrupt()
+        if Cracker.crt_process is not None and Cracker.crt_process.poll() is None:
+            Cracker.crt_process.terminate()
 
         Cracker.crt_process = None
 
