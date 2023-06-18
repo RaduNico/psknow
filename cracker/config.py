@@ -125,7 +125,8 @@ class Configuration(object):
                 return "process '%s' crashed with return code '%d'\nStdout: %s\nStderr: %s" % \
                        (test_john_runs, retcode, p.stdout(), p.stderr())
         finally:
-            os.remove(passwd_filename)
+            if not is_win:
+                os.remove(passwd_filename)
 
         return True
 
