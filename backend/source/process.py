@@ -14,7 +14,7 @@ class Process:
     @staticmethod
     def devnull():
         ''' Helper method for opening devnull '''
-        return open('/dev/null', 'w')
+        return open(os.devnull, 'w')
 
     @staticmethod
     def call(command, cwd=None, shell=False):
