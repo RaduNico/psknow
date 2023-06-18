@@ -24,11 +24,11 @@ hashcat_speed_re = re.compile("^Speed(.*?):[ ]+([0-9]*\.[0-9]* .?H/s)")
 class NoProcess:
     @staticmethod
     def get_devnull_w():
-        return open('/dev/null', 'w')
+        return open(os.devnull, 'w')
 
     @staticmethod
     def get_devnull_r():
-        return open('/dev/null', 'r')
+        return open(os.devnull, 'r')
 
     @staticmethod
     def get_pipe_wrapper():
