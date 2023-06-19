@@ -99,6 +99,8 @@ class Cracker:
         # Translate rule type to command
         if rule["type"] == "generated":
             generator = rule["aux_data"]
+            if generator.endswith(".py"):
+                generator = "python3 " + generator
 
         elif rule["type"] == "john":
             generator = "%s --min-length=8 --wordlist=%s --rules=%s --stdout" %\
