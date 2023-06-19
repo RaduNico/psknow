@@ -92,8 +92,9 @@ class Cracker:
     @staticmethod
     def get_attack_command(rule, filename, ssid):
         generator = ""
-        attack_command = "%s -w %d --potfile-path=%s -m 22000" % \
-                         (Configuration.hashcat_executable, Cracker.crt_workload, Configuration.hashcat_potfile_path)
+        attack_command = "%s -w %d --session %s --potfile-path=%s -m 22000" % \
+                         (Configuration.hashcat_executable, Cracker.crt_workload,
+                          Configuration.session_filename, Configuration.hashcat_potfile_path)
         scrambler = None
 
         # Translate rule type to command

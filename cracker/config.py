@@ -23,6 +23,7 @@ class Configuration(object):
 
     config_file = "cracker.conf"
     tempfile_dir = ".tmp_files"
+    session_filename = "hashcat_session"
     empty_config = {
         "john_path": "",
         "apikey": ""}
