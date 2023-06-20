@@ -440,7 +440,7 @@ def is_wifi_password(password, db_entry):
             Configuration.logger.error("Failed to generate 22000 hash for password checking. Entry %s" % db_entry)
             return False, "Failed to generate 22000 hash for password checking."
 
-        command = 'hcxpmktool -l %s -p %s' % (capture, password)
+        command = ["hcxpmktool", "-l", capture, "-p", password]
 
         process = Process(command)
         process.wait()
